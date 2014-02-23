@@ -1,7 +1,7 @@
 html2js
 =======
 It's an express.js template module which creates pure js functions from html templates including i18n internationalization and translations without learning a new mark-up-language.
-html2js gives you full flexibility and power of js inside your templates.
+html2js gives you full flexibility and power of js inside your templates because you can use plain js to build your own logic.
 
 
 
