@@ -248,3 +248,12 @@ Now we are able to use it like any other template engine
     res.render('ch/fr/index',{data:{var1:'value of var 1',a:[1,2,3,4,5,6,7,8]}});
 
 You can see we select country-language version and template by setting first parameter to *CountryCode/LanguageCode/TemplateName*. On second parameter we can set values for render output.
+
+Credits
+=====
+This template engine was also inspired by doT.js http://olado.github.io/doT/index.html and Gaikan https://github.com/Deathspike/gaikan/
+
+License
+=====
+Copyright (c) 2014 Sebastian Wessel
+MIT License - see LICENSE
