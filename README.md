@@ -1,9 +1,7 @@
 html2js
 =======
-It's an express.js template module which creates pure js functions from html templates including i18n internationalization and translations without learning a new mark-up-language.
+It's an express.js template module which creates pure js functions from html templates including i18n internationalisation and translations without learning a new mark-up-language.
 html2js gives you full flexibility and power of js inside your templates because you can use plain js to build your own logic.
-
-
 
 Install
 ====
@@ -15,7 +13,7 @@ or download latest source from git.
 
 i18n internationalization
 ===============
-To generate templates for multiple country-language-combinantions we create a file for each combinantion.
+To generate templates for multiple country-language combinations we create a file for each combination.
 Name convention is *countryCode-languageCode.local* and content of file will be simple JSON.
 
 So a local-file *uk-en.local* will look like
@@ -34,14 +32,34 @@ If you like to add a language just copy your current local-file, re-name it for 
         ....
     }
 
-
 HTML-Templates
 ==========
 Creating a template is still easy. You can take your html as it is - just insert placeholders where you need it.
 
-**You only have to take care not to use ' somwhere in your HTML-code because it will broke-down compiled functions! Use " instead ' to prevent this.**
+**You only have to take care not to use ' somewhere in your HTML-code because it will broke-down compiled functions! Use " instead of ' to prevent this.**
 
 **Also take care that there is a space after {{ and before }} - so {{translate.something}} will be wrong**
+
+Generally there will be a template called *layout.html* which contains the default ribbon and wraps all other templates by default.
+It can look like this:
+
+    <html>
+    <head>
+        <title>Your title goes here</title>
+    </head>
+    <body>
+        <div>{{inc header.html }}</div>
+        <div>{{inc sidebar.html }}</div>
+        <div>{{ body }}</div>
+        <div>{{inc footer.html }}</div>
+    </body>
+    </html>
+
+All other templates will be inserted on **{{ body }}**, so you dont have to include same things on each template.
+By default the wrapping template is named *layout.html* but you are able to set the wrapping template during runtime.
+If you like to use a template other than *layout.html* it has to be named like *layoutmytemplate.html* - so name has to start with *layout* and end up with *.html*.
+This gives you the option to use more than one *layout.html*. It will be useful for example if you need different layouts for front-end and back-end.
+You can use *layout.html* for front-end and add a separated layout for back-end called *layoutbackend.html*.
 
 You can access current country code and language code in your templates:
 
@@ -98,8 +116,8 @@ So in the example above it will compile something like:
         return r+' '+translate.message;
     }
 
-{{fn ... }} will wrap everthing into a seperate function and you can access translations and data. You only have to return a value.
-**But keep eyes on what you are doing and if it's necessary to do it on each request. It hurts your performance.**
+{{fn ... }} will wrap everything into a separate function and you can access translations and data. You only have to return a value.
+**But keep eyes on what you are doing and if its necessary to do it on each request. It hurts your performance.**
 For example reading a value from a database and (un)escaping this string on each request isn't optimal - try to store the (un)escaped string into database and save time for (un)escaping on each request.
 As we return HTML it makes most time no sense to do something like:
 
@@ -110,6 +128,9 @@ You can use css on client side and don't need to convert it on server-side on ea
 
 Functions
 ======
+
+Creation
+----------
 To create js functions from html templates and i18n locals you have to call
 
     createTranslationTemplates(HTML_TemplateDirectory,locals_Directory,ViewOutputDirectory,Callback)
@@ -119,6 +140,32 @@ It also creates a file **compiled.js** for each local-file which will be also st
 
 **createTranslationTemplates will do a lot of synchronous stuff!
 Use it when you start your server but not on any request handler**
+
+
+Rendering
+-----------
+To render your template you can use regular express.js function *res.render* which can have up to 3 parameters.
+
+    res.render(template,options,callback);
+
+**parameter template**
+- contains a string where you can set name of template to use for rendering
+- structure will be like *uk/en/index* where we set countryCode/languageCode/templateName (without *.html* suffix)
+
+**parameter options**
+- contains data we like to render into our template
+- can set layout-template different to *layout.html* or disable use of layout-template
+
+    var options={
+        layout:'layoutothertemplate', //layout:'' means don't use any layout-template
+        data:{
+            myvar: 'value to set',
+            othervar: 'other value to set'
+            ......
+        }
+    }
+
+If *options.layout* is not set *layout.html* will be used by default. To disable layout template and render given template only (useful for example on Ajax requests) set *options.layout* to empty string.
 
 Example
 =====
@@ -200,4 +247,4 @@ Now we are able to use it like any other template engine
 
     res.render('ch/fr/index',{data:{var1:'value of var 1',a:[1,2,3,4,5,6,7,8]}});
 
-You can see we select country-language version and template by setting first parameter to *CountryCode/LanguageCode/TemplateName*. On secound parameter we can set values for render output.
+You can see we select country-language version and template by setting first parameter to *CountryCode/LanguageCode/TemplateName*. On second parameter we can set values for render output.

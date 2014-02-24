@@ -1,3 +1,12 @@
+/**
+ *
+ * @type type It's an express.js template module which creates pure js functions from html templates including i18n internationalization and translations without learning a new mark-up-language.
+ * html2js gives you full flexibility and power of js inside your templates because you can use plain js to build your own logic.
+ * 
+ * @author Sebastian Wessel
+ * @licence MIT
+ * @url https://github.com/sebastianwessel/html2js
+ */
 var fs = require('fs');
 
 var options={
@@ -6,6 +15,16 @@ var options={
     outputDir:'./views'
 };
 
+/*
+ * Reads template files from templateDir and replaces placeholders with translations from local-files in laocalsDir.
+ * Translated templates will be stored in subdirectories of outputDir.
+ * createTranslationTemplates calls callback when finished.
+ * 
+ * @param {String} templateDir
+ * @param {String} localsDir
+ * @param {String} outputDir
+ * @param {Function} callback
+ */
 function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
 {
     callback = (typeof callback === 'function') ? callback : function () {};
@@ -58,7 +77,6 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
                             templatefiles,
                             fs.readFileSync(outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],'utf8')
                                     );
-                        //console.log( t );
                         js+=t+'\n';
                     }
                     
@@ -81,7 +99,16 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
 }
 
 
-
+/*
+ * Checks if subdirectory in outputDir for given countryCode and languageCode exists.
+ * If subdirectory does not exist this function will create necessary subdirectories.
+ * On success null will be returned otherwise an error will be returned.
+ * 
+ * @param {String} outputDir
+ * @param {String} countryCode
+ * @param {String} languageCode
+ * @return {null|Error}
+ */
 function createOutputDir(outputDir,countryCode,languageCode)
 {
     var ret=true;
@@ -114,41 +141,68 @@ function createOutputDir(outputDir,countryCode,languageCode)
     }
 }
 
-
+/*
+ * This function reads content of file input, replaces placeholders with translations from JSON-object translate and writes result ro output file
+ * @param {String} input
+ * @param {String} output
+ * @param {Object} translate
+ * @return {null|Error}
+ */
 function translateTemplate(input,output,translate)
 {
 
-    data=fs.readFileSync(input,'utf8')
-    var d=data;
-    d=data.replace(/\{\{ (translate\.[\s\S]+?(\}?)+) \}\}/g , function(match,trans){ 
-        //var i=trans.replace(/translate\./,'translation.');
-        var v = eval(trans);
-        if(typeof v!='undefined')
-        {
-            return v;
-        }else
-        {
-            console.log('warning: '+trans+' '+(typeof v)+' for '+translate.currentCountryCode+'-'+translate.currentLanguageCode+' but used in template '+input);
-            return match;
-        }
+    try
+    {
+        data=fs.readFileSync(input,'utf8')
+        var d=data;
+        d=data.replace(/\{\{ (translate\.[\s\S]+?(\}?)+) \}\}/g , function(match,trans){ 
+            //var i=trans.replace(/translate\./,'translation.');
+            var v = eval(trans);
+            if(typeof v!='undefined')
+            {
+                return v;
+            }else
+            {
+                console.log('warning: '+trans+' '+(typeof v)+' for '+translate.currentCountryCode+'-'+translate.currentLanguageCode+' but used in template '+input);
+                return match;
+            }
 
-    });
-    fs.writeFileSync(output,d,{encoding:'utf8'});
- 
+        });
+        fs.writeFileSync(output,d,{encoding:'utf8'});
+        return null;
+    }catch(e)
+    {
+        return e;
+    }
 }
 
 
+function strStartsWith(str, prefix) {
+    return str.indexOf(prefix) === 0;
+}
+
+
+/*
+ * This function takes translated html template content for one country-language-combinantion and creates js code.
+ * Generated js code will be returned as String.
+ * 
+ * @param {String} countryCode
+ * @param {String} languageCode
+ * @param {String} templateName
+ * @param {Array} allTemplates
+ * @param {String} templateContent
+ * @returns {String}
+ */
 function generateJS(countryCode,languageCode,templateName,allTemplates,templateContent)
 {
     var t=templateContent;
-    //var fname=templateName.replace(/.html/,'')+'_'+countryCode+'_'+languageCode;
     var fname=templateName.replace(/.html/,'');
     var userfn=[];
+    var isLayout=strStartsWith(fname,'layout');
     
     t=t.replace(/\{\{inc ([\s\S]+?(\}?)+) \}\}/g , function(match,incfile){
         if(allTemplates.indexOf(incfile)>=0)
         {
-            //return "'+"+incfile.replace(/.html/,'')+'_'+countryCode+'_'+languageCode+"(data,translate)+'";
             return "'+"+incfile.replace(/.html/,'')+"(data)+'";
         }else
         {
@@ -158,7 +212,6 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
     });
     
     t=t.replace(/\{\{fn ([\s\S]+?(\}?)+) \}\}/g , function(match,fn){
-        //return "'+function(){"+fn+"}+'";
         var l=userfn.length;
         userfn[l]='function '+fname+'_'+l+'(data){'+fn+'}';
         return "'+"+fname+'_'+l+"(data)+'";
@@ -176,21 +229,35 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
     {
         js+=userfn[x2]+"\n";
     }
-    js+='function '+fname+'(data){';
     
-    //js+='\nvar countryCode="'+countryCode+'";\nvar languageCode="'+languageCode+'";\n';
+    if(isLayout)
+    {
+        t=t.replace(/\{\{ body \}\}/g , "'+body+'");
+        js+='function '+fname+'(data,body){';
+    }else
+    {
+        js+='function '+fname+'(data){';
+    }
+    
+    
     js+="\n";
     js+="return '"+t+"';\n";
     js+='}\n';
     js+='module.exports.'+fname+'='+fname+';\n';
     
-    
-    
     return js;
 }
 
+/*
+ * @param {String} filename
+ * @param {Object} options
+ * @param {Function} callback
+ */
 function __express(filename, options, callback) {
     callback = (typeof callback === 'function') ? callback : function () {};
+    
+    options = (typeof options === 'object') ? options : {layout:'layout',data:{}};
+    if(typeof options.layout ==='undefined') options.layout='layout';
     
     var sp=filename.split('/');
     var countryCode=sp[sp.length-3];
@@ -203,10 +270,22 @@ function __express(filename, options, callback) {
     }
     js+='compiled.js';
     var compiled=require(js);
-    content = compiled[template](options.data);
+    var content='';
+    if(options.layout!='')
+    {
+        content = compiled[options.layout](options.data ,compiled[template](options.data));
+    }else
+    {
+        content = compiled[template](options.data);
+    }    
     return callback(null,content);
 }
 
+function html2js()
+{
+    
+}
 
+module.exports.html2js=html2js;
 module.exports.__express=__express;
 module.exports.createTranslationTemplates=createTranslationTemplates;
