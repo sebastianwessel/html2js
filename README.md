@@ -167,6 +167,13 @@ To render your template you can use regular express.js function *res.render* whi
 
 If *options.layout* is not set *layout.html* will be used by default. To disable layout template and render given template only (useful for example on Ajax requests) set *options.layout* to empty string.
 
+
+**parameter callback**
+Will be a callback-function which will be called after finishing creation of HTML-content.
+This function has two parameters.
+    callback(err,html)
+...where err is null if everything was ok or contains an Error object if something went wrong. Parameter html will contain HTML-content as string.
+
 Example
 =====
 
