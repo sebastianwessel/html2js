@@ -36,7 +36,7 @@ HTML-Templates
 ==========
 Creating a template is still easy. You can take your html as it is - just insert placeholders where you need it.
 
-**You only have to take care not to use ' somewhere in your HTML-code because it will broke-down compiled functions! Use " instead of ' to prevent this.**
+**You only have to take care not to use ' somewhere in your HTML-code because it will broke-down compiled functions! Use " instead of ' or escape with \' to prevent this.**
 
 **Also take care that there is a space after {{ and before }} - so {{translate.something}} will be wrong**
 
