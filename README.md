@@ -40,6 +40,10 @@ Creating a template is still easy. You can take your html as it is - just insert
 
 **Also take care that there is a space after {{ and before }} - so {{translate.something}} will be wrong**
 
+**Name your templates without spaces or special characters with ending *.html* example: *my template.html* will be invalid and ends up with broken compiled js code**
+
+**Subfolders in template- or locals- directory are currently not supported**
+
 Generally there will be a template called *layout.html* which contains the default ribbon and wraps all other templates by default.
 It can look like this:
 
