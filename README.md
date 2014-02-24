@@ -158,7 +158,7 @@ To render your template you can use regular express.js function *res.render* whi
 
 
     var options={
-        layout:'layoutothertemplate', //layout:'' means don't use any layout-template
+        layout:'layoutothertemplate', 
         data:{
             myvar: 'value to set',
             othervar: 'other value to set'
