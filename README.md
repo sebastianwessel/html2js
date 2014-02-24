@@ -156,6 +156,7 @@ To render your template you can use regular express.js function *res.render* whi
 - contains data we like to render into our template
 - can set layout-template different to *layout.html* or disable use of layout-template
 
+example:
 
     var options={
         layout:'layoutothertemplate', 
