@@ -88,6 +88,8 @@ So you can do something like this:
 
 **Don't use *currentLanguageCode* or *currentCountryCode* as name for translations in your local-files! It will be overwritten.**
 
+All translations for current country-language are stored in *translate* object.
+You can access your translations like *translate.yourkey*.
 To insert a translation just put in your html template something like this:
 
     .....
@@ -95,6 +97,8 @@ To insert a translation just put in your html template something like this:
     <p>{{ translate.text }}</p>
     .....
 
+Data which is created during runtime will be stored in *data* object.
+You can acces your data like *data.myvalue*.
 To output some dynamic data during runtime - for example some things you read from database or such stuff:
 
     .....
@@ -255,14 +259,16 @@ To render your template you can use regular express.js function *res.render* whi
 
 example:
 
-    var options={
-        layout:'layoutothertemplate', //layout:'' means don't use any layout-template
-        data:{
-            myvar: 'value to set',
-            othervar: 'other value to set'
-            ......
-        }
+```JavaScript
+var options={
+    layout:'layoutothertemplate', //layout:'' means don't use any layout-template
+    data:{
+        myvar: 'value to set',
+        othervar: 'other value to set'
+        ......
     }
+}
+```
 
 If *options.layout* is not set *layout.html* will be used by default. To disable layout template and render given template only (useful for example on Ajax requests) set *options.layout* to empty string.
 
@@ -294,6 +300,7 @@ Your project structure should look like this:
     |    |-- layout.html
     |    |-- index.html
     |    |-- sidebar.html
+    |    |-- functions.js
     |     ....
     |-- views
     .....
@@ -329,6 +336,7 @@ After calling *createTranslationTemplates* you project structure should look lik
     |    |-- layout.html
     |    |-- index.html
     |    |-- sidebar.html
+    |    |-- functions.js
     |     ....
     |-- views
     |    |-- uk
