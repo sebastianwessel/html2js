@@ -183,7 +183,7 @@ Just write your code and use *return* to return and output your data.
 .....
 ```
 
-The example above will be compile into something like:
+The example above will be compiled into something like:
 
 ```JavaScript
 function fn123(data,translate)
@@ -199,7 +199,7 @@ function fn123(data,translate)
 
 {{fn ... }} will wrap everything into a separate function and you can access translations and data. You only have to return a value.
 As you can see you got access to your data and your current local translation object.
-**But keep eyes on what you are doing and if its necessary to do it on each request. It maybe hurts your performance.**
+**But keep eyes on what you are doing, how you implement it and if its necessary to do it on each request. It maybe drops performance.**
 Self-defining functions will become a name automaticly on each generation.
 
 pre-defined functions
@@ -276,6 +276,27 @@ As we return HTML it makes most time no sense to do something like:
 ```
 
 You can use css on client side and don't need to convert it on server-side on each request in most cases.
+
+Avoid use of global vars inside your functions because it can drop performance and unexpected errors maybe occour because you can overwrite internal vars used by server program.
+Also keep an eye on how you write loops - using something like *a.length* inside a loop-condition is a common mistake because you request *a.length* times size of *a*, but it doesn't change whole time.
+
+**wrong:**
+```JavaScript
+for(x=0;x<a.length;x++)
+{
+    ret+=a[x];
+}
+return ret;
+```
+**correct:**
+```JavaScript
+var ret='';
+for(var x=0,x_max=a.length;x<x_max;x++)
+{
+    ret+=a[x];
+}
+return ret;
+```
 
 Functions
 ======
