@@ -206,16 +206,16 @@ You can use some build-in function out-of-box:
 -encode(value);
 
 ```JavaScript
-    <div>{{inline
-        if(data.x>0)
-        {
-            ret+=translate.results+':<br/>';
-            ret+=encode(data.something);
-        }else
-        {
-            ret+=translate.nothingFound;
-        }
-    }}</div>
+{{inline
+    if(data.x>0)
+    {
+        ret+=translate.results+':<br/>';
+        ret+=encode(data.something);
+    }else
+    {
+        ret+=translate.nothingFound;
+    }
+}}
 ```
 
 
