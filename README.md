@@ -243,10 +243,10 @@ You can for example add a code like this:
 
 ```HTML
     <select name="myselect">
-        {{inline outputSelectOptions(data.variable); }}
+        {{inline ret+=outputSelectOptions(data.variable); }}
     </select>
     <select name="myotherselect">
-        {{inline outputSelectOptions(data.othervar); }}
+        {{inline ret+=outputSelectOptions(data.othervar); }}
     </select>
 ```
 
@@ -271,8 +271,8 @@ For example reading a value from a database and (un)escaping this string on each
 As we return HTML it makes most time no sense to do something like:
 
 ```JavaScript
-    {{inline data.val1.toUpperCase() }}
-    {{inline data.val2.toLowerCase() }}
+    {{inline ret+=data.val1.toUpperCase(); }}
+    {{inline ret+=data.val2.toLowerCase(); }}
 ```
 
 You can use css on client side and don't need to convert it on server-side on each request in most cases.
