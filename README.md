@@ -360,19 +360,25 @@ Your project structure should look like this:
 
 First of all you have to tell your programm that we need html2js-module
 
-    var html2js=require('html2js');
+```JavaScript
+var html2js=require('html2js');
+```
 
 Then we have to tell express.js where to find template-files used during runtime
 
-    app.set('views', __dirname + '/views');
+```JavaScript
+app.set('views', __dirname + '/views');
+```
 
 To build template-files into directory "views" we have to call
 
-    html2js.createTranslationTemplates(__dirname + '/templates',__dirname + '/locals',app.get('views'),function(err){
-       app.set('view engine', 'html' );
-       app.engine('html', html2js.__express );
-       app.enabled('view cache');
-    });
+```JavaScript
+html2js.createTranslationTemplates(__dirname + '/templates',__dirname + '/locals',app.get('views'),function(err){
+   app.set('view engine', 'html' );
+   app.engine('html', html2js.__express );
+   app.enabled('view cache');
+});
+```
 
 After calling *createTranslationTemplates* you project structure should look like this
 
@@ -415,9 +421,22 @@ After calling *createTranslationTemplates* you project structure should look lik
 
 Now we are able to use it like any other template engine
 
-    res.render('ch/fr/index',{data:{var1:'value of var 1',a:[1,2,3,4,5,6,7,8]}});
+```JavaScript
+res.render('ch/fr/index',{data:{var1:'value of var 1',a:[1,2,3,4,5,6,7,8]}});
+```
 
 You can see we select country-language version and template by setting first parameter to *CountryCode/LanguageCode/TemplateName*. On second parameter we can set values for render output.
+
+```JavaScript
+res.render('ch/fr/index',{layout:'',data:{var1:'value of var 1',a:[1,2,3,4,5,6,7,8]}});
+```
+In example above we render our template *index* without wrapping it into default *layout*-template.
+
+To wrap your template into different *layout*-template:
+
+```JavaScript
+res.render('ch/fr/index',{layout:'layoutbackend',data:{var1:'value of var 1',a:[1,2,3,4,5,6,7,8]}});
+```
 
 Credits
 =====
