@@ -39,6 +39,9 @@ or download latest source from git.
 
 i18n internationalization
 ===============
+Maintaining code and templates are hard and even harder as more country-languages combinations you have to maintain.
+So html2js builds different templates for country-language combinations from **one single template**.
+You don't have to maintain multiple templates for multiple country-language combinations! Create one template, define translations and the rest will be done by html2js.
 To generate templates for multiple country-language combinations we create a file for each combination.
 Name convention is *countryCode-languageCode.local* and content of file will be simple JSON.
 
