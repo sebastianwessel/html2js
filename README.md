@@ -5,7 +5,6 @@ html2js gives you full flexibility and power of js inside your templates because
 It's blazing fast because your HTML template will be automaticly converted into pure js code during startup.
 
 **WHY SHOULD I USE IT?**
-
 - blazing fast because of creating pure, executable js code
 - one template fits for different language/country combinations(i18n support) for simple maintaining your templates
 - easy and short syntax inside of pure HTML
@@ -13,6 +12,8 @@ It's blazing fast because your HTML template will be automaticly converted into 
 - easy extendable without touching server- or module code with pure js code
 - define and re-use your own functions with pure js for better maintaining your templates
 
+Index
+====
 - [Install](#install)
 - [i18n internationalization](#i18n-internationalization)
 - [HTML-Templates](#html-templates)
