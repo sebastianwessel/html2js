@@ -29,19 +29,23 @@ Name convention is *countryCode-languageCode.local* and content of file will be 
 
 So a local-file *uk-en.local* will look like
 
-    {
-        headline:"This is our headline",
-        text:"Here is some text"
-        ....
-    }
+```JavaScript
+{
+    headline:"This is our headline",
+    text:"Here is some text"
+    ....
+}
+```
 
 If you like to add a language just copy your current local-file, re-name it for example to *uk-de.local* and change the translations
 
-    {
-        headline:"Hier ist unsere Headline",
-        text:"Da steht ein Text"
-        ....
-    }
+```JavaScript
+{
+    headline:"Hier ist unsere Headline",
+    text:"Da steht ein Text"
+    ....
+}
+```
 
 HTML-Templates
 ==========
@@ -57,18 +61,19 @@ Creating a template is still easy. You can take your html as it is - just insert
 
 Generally there will be a template called *layout.html* which contains the default ribbon and wraps all other templates by default.
 It can look like this:
-
-    <html>
-    <head>
-        <title>Your title goes here</title>
-    </head>
-    <body>
-        <div>{{inc header.html }}</div>
-        <div>{{inc sidebar.html }}</div>
-        <div>{{ body }}</div>
-        <div>{{inc footer.html }}</div>
-    </body>
-    </html>
+```HTML
+<html>
+<head>
+    <title>Your title goes here</title>
+</head>
+<body>
+    <div>{{inc header.html }}</div>
+    <div>{{inc sidebar.html }}</div>
+    <div>{{ body }}</div>
+    <div>{{inc footer.html }}</div>
+</body>
+</html>
+```
 
 All other templates will be inserted on **{{ body }}**, so you dont have to include same things on each template.
 By default the wrapping template is named *layout.html* but you are able to set the wrapping template during runtime.
@@ -78,13 +83,18 @@ You can use *layout.html* for front-end and add a separated layout for back-end 
 
 You can access current country code and language code in your templates:
 
-    <div>{{ translate.currentLanguageCode }}</div>
-    <div>{{ translate.currentCountryCode }}</div>
+```HTML
+<div>{{ translate.currentLanguageCode }}</div>
+<div>{{ translate.currentCountryCode }}</div>
+```
+
 So you can do something like this:
 
-    <!doctype html>
-    <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{ translate.currentLanguageCode }}" lang="{{ translate.currentLanguageCode }}">
-    <head>
+```HTML
+<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="{{ translate.currentLanguageCode }}" lang="{{ translate.currentLanguageCode }}">
+<head>
+```
 
 **Don't use *currentLanguageCode* or *currentCountryCode* as name for translations in your local-files! It will be overwritten.**
 
@@ -92,26 +102,32 @@ All translations for current country-language are stored in *translate* object.
 You can access your translations like *translate.yourkey*.
 To insert a translation just put in your html template something like this:
 
-    .....
-    <h1>{{ translate.headline }}</h1>
-    <p>{{ translate.text }}</p>
-    .....
+```HTML
+.....
+<h1>{{ translate.headline }}</h1>
+<p>{{ translate.text }}</p>
+.....
+```
 
 Data which is created during runtime will be stored in *data* object.
 You can acces your data like *data.myvalue*.
 To output some dynamic data during runtime - for example some things you read from database or such stuff:
 
-    .....
-    <div>{{ data.var1 }}</h1>
-    <p>{{ data.var2 }}</p>
-    .....
+```HTML
+.....
+<div>{{ data.var1 }}</h1>
+<p>{{ data.var2 }}</p>
+.....
+```
 
 To include other template parts (partials) just use something like this:
 
-     .....
-    <div>{{inc sidebar.html }}</div>
-    <div>{{inc footer.html }}</div>
-    .....
+```HTML
+.....
+<div>{{inc sidebar.html }}</div>
+<div>{{inc footer.html }}</div>
+.....
+```
 
 You are also able to implement logic-functions with full power of js to execute some code during runtime.
 There are three options available to implement your own template logic.
@@ -121,13 +137,16 @@ inline functions
 Because of inline-functions you are able to execute functions or small code.
 To add something to your output you have to call *ret+=[...your value...];*.
 
-    .....
-    <div>{{inline
-        ret+=(data.x+1); //outputs value x+1
-        ret+=data.something.toUpperCase(); //outputs something in lower cases
-        ret+=translate.somelabel+': '+data.somevalue;
-        ret+=myFunction(data.x); //call a function and out returned value
-    }}</div>
+```HTML
+....
+<div>{{inline
+    ret+=(data.x+1); //outputs value x+1
+    ret+=data.something.toUpperCase(); //outputs something in lower cases
+    ret+=translate.somelabel+': '+data.somevalue;
+    ret+=myFunction(data.x); //call a function and out returned value
+}}</div>
+....
+```
 
 self-defining
 ---------------
@@ -135,26 +154,30 @@ Sometimes you need a more complex functionality or you like to copy and paste so
 For this cases you can define the code for a function like a regular function without setting a name or parameters.
 Just write your code and use *return* to return and output your data.
 
-    .....
-    <div>{{fn
-            var r='';
-            for(var x=0,x_max=data.a.length;x<x_max;x++)
-            {r+=data.a[x];} 
-            return r+' '+translate.message;
-    }}</div>
-    .....
+```HTML
+.....
+<div>{{fn
+        var r='';
+        for(var x=0,x_max=data.a.length;x<x_max;x++)
+        {r+=data.a[x];} 
+        return r+' '+translate.message;
+}}</div>
+.....
+```
 
 The example above will be compile into something like:
 
-    function fn123(data,translate)
+```JavaScript
+function fn123(data,translate)
+{
+    var r='';
+    for(var x=0,x_max=data.a.length;x<x_max;x++)
     {
-        var r='';
-        for(var x=0,x_max=data.a.length;x<x_max;x++)
-        {
-            r+=data.a[x];
-        } 
-        return r+' '+translate.message;
-    }
+        r+=data.a[x];
+    } 
+    return r+' '+translate.message;
+}
+```
 
 {{fn ... }} will wrap everything into a separate function and you can access translations and data. You only have to return a value.
 As you can see you got access to your data and your current local translation object.
@@ -165,8 +188,9 @@ pre-defined functions
 ------------------------------
 You can use some build-in function out-of-box:
 
--**encode(value);**
+-encode(value);
 
+```HTML
     <div>
     {{inline
         if(data.x>0)
@@ -178,6 +202,7 @@ You can use some build-in function out-of-box:
             ret+=translate.nothingFound;
         }
     }}
+```
 
 
 adding own pre-definied functions
@@ -255,7 +280,9 @@ Rendering
 -----------
 To render your template you can use regular express.js function *res.render* which can have up to 3 parameters.
 
-    res.render(template,options,callback);
+```JavaScript
+res.render(template,options,callback);
+```
 
 **parameter template**
 - contains a string where you can set name of template to use for rendering
