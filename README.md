@@ -137,7 +137,7 @@ inline functions
 Because of inline-functions you are able to execute functions or small code.
 To add something to your output you have to call *ret+=[...your value...];*.
 
-```HTML
+```JavaScript
 ....
 <div>{{inline
     ret+=(data.x+1); //outputs value x+1
@@ -154,7 +154,7 @@ Sometimes you need a more complex functionality or you like to copy and paste so
 For this cases you can define the code for a function like a regular function without setting a name or parameters.
 Just write your code and use *return* to return and output your data.
 
-```HTML
+```JavaScript
 .....
 <div>{{fn
         var r='';
@@ -191,7 +191,7 @@ You can use some build-in function out-of-box:
 -encode(value);
 
 ```JavaScript
-    {{inline
+    <div>{{inline
         if(data.x>0)
         {
             ret+=translate.results+':<br/>';
@@ -200,7 +200,7 @@ You can use some build-in function out-of-box:
         {
             ret+=translate.nothingFound;
         }
-    }}
+    }}</div>
 ```
 
 
