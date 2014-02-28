@@ -14,6 +14,21 @@ It's blazing fast because your HTML template will be automaticly converted into 
 - define and re-use your own functions with pure js for better maintaining your templates
 
 
+- [Install](#install)
+- [i18n internationalization](#i18n-internationalization)
+- [HTML-Templates](#html-templates)
+	- [inline functions](#inline-functions)
+	- [self-defining](#self-defining)
+	- [pre-defined functions](#pre-defined-functions)
+	- [adding own pre-definied functions](#adding-own-pre-definied-functions)
+	- [performance recommendations](#performance-recommendations)
+- [Functions](#functions)
+	- [Creation](#creation)
+	- [Rendering](#rendering)
+- [Example](#example)
+- [Credits](#credits)
+- [License](#license)
+
 Install
 ====
 use node package manager npm to install html2js
@@ -139,12 +154,12 @@ To add something to your output you have to call *ret+=[...your value...];*.
 
 ```JavaScript
 ....
-<div>{{inline
+{{inline
     ret+=(data.x+1); //outputs value x+1
     ret+=data.something.toUpperCase(); //outputs something in lower cases
     ret+=translate.somelabel+': '+data.somevalue;
     ret+=myFunction(data.x); //call a function and out returned value
-}}</div>
+}}
 ....
 ```
 
@@ -156,12 +171,12 @@ Just write your code and use *return* to return and output your data.
 
 ```JavaScript
 .....
-<div>{{fn
+{{fn
         var r='';
         for(var x=0,x_max=data.a.length;x<x_max;x++)
         {r+=data.a[x];} 
         return r+' '+translate.message;
-}}</div>
+}}
 .....
 ```
 
