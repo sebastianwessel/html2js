@@ -14,6 +14,23 @@ It's blazing fast because your HTML template will be automaticly converted into 
 - define and re-use your own functions with pure js for better maintaining your templates
 
 
+- [html2js](#html2js)
+- [Install](#install)
+- [i18n internationalization](#i18n-internationalization)
+- [HTML-Templates](#html-templates)
+	- [inline functions](#inline-functions)
+	- [self-defining](#self-defining)
+	- [pre-defined functions](#pre-defined-functions)
+	- [adding own pre-definied functions](#adding-own-pre-definied-functions)
+	- [performance recommendations](#performance-recommendations)
+- [Functions](#functions)
+	- [Creation](#creation)
+	- [Rendering](#rendering)
+- [Example](#example)
+- [Credits](#credits)
+- [License](#license)
+
+
 Install
 ====
 use node package manager npm to install html2js
