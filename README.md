@@ -185,6 +185,7 @@ adding own pre-definied functions
 To add your own functions you can also create a regular js-file inside of templates directory and name it **functions.js**.
 You can for example add a code like this:
 
+```JavaScript
     function outputSelectOptions(val)
     {
         var ret='';
@@ -194,18 +195,22 @@ You can for example add a code like this:
         }
         return ret;
     }
+```
 
 ...and on any of your templates you can add this functionality like:
 
+```HTML
     <select name="myselect">
         {{inline outputSelectOptions(data.variable); }}
     </select>
     <select name="myotherselect">
         {{inline outputSelectOptions(data.othervar); }}
     </select>
+```
 
 ...and this will output something like:
 
+```HTML
     <select name="myselect">
         <option value="1">good</option>
         <option value="2">better</option>
@@ -216,14 +221,17 @@ You can for example add a code like this:
         <option value="at">austria</option>
         ...
     </select>
+```
 
 performance recommendations
 -----------------------------------
 For example reading a value from a database and (un)escaping this string on each request isn't optimal - try to store the (un)escaped string into database and save time for (un)escaping on each request.
 As we return HTML it makes most time no sense to do something like:
 
+```JavaScript
     {{inline data.val1.toUpperCase() }}
     {{inline data.val2.toLowerCase() }}
+```
 
 You can use css on client side and don't need to convert it on server-side on each request in most cases.
 
@@ -277,7 +285,9 @@ If *options.layout* is not set *layout.html* will be used by default. To disable
 Will be a callback-function which will be called after finishing creation of HTML-content.
 This function has two parameters.
 
-    callback(err,html)
+```JavaScript
+callback(err,html);
+```
 
 ...where err is null if everything was ok or contains an Error object if something went wrong. Parameter html will contain HTML-content as string.
 
