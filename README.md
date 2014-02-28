@@ -112,7 +112,8 @@ To include other template parts (partials) just use something like this:
 You are also able to implement logic-functions with full power of js to execute some code during runtime.
 There are three options available to implement your own template logic.
 
-**inline functions**
+inline functions
+-----------------
 Because of inline-functions you are able to execute functions or small code.
 To add something to your output you have to call *ret+=[...your value...];*.
 
@@ -124,7 +125,8 @@ To add something to your output you have to call *ret+=[...your value...];*.
         ret+=myFunction(data.x); //call a function and out returned value
     }}</div>
 
-**self-defining**
+self-defining
+---------------
 Sometimes you need a more complex functionality or you like to copy and paste some functions.
 For this cases you can define the code for a function like a regular function without setting a name or parameters.
 Just write your code and use *return* to return and output your data.
@@ -155,11 +157,11 @@ As you can see you got access to your data and your current local translation ob
 **But keep eyes on what you are doing and if its necessary to do it on each request. It maybe hurts your performance.**
 Self-defining functions will become a name automaticly on each generation.
 
-**pre-defined functions**
+pre-defined functions
+------------------------------
 You can use some build-in function out-of-box:
 
-- **encode(value);**
--
+-**encode(value);**
 
     <div>
     {{inline
@@ -174,7 +176,8 @@ You can use some build-in function out-of-box:
     }}
 
 
-**adding own pre-definied functions**
+adding own pre-definied functions
+----------------------------------------
 To add your own functions you can also create a regular js-file inside of templates directory and name it **functions.js**.
 You can for example add a code like this:
 
@@ -193,7 +196,7 @@ You can for example add a code like this:
     <select name="myselect">
         {{inline outputSelectOptions(data.variable); }}
     </select>
-    <select name="myselect">
+    <select name="myotherselect">
         {{inline outputSelectOptions(data.othervar); }}
     </select>
 
@@ -204,13 +207,14 @@ You can for example add a code like this:
         <option value="2">better</option>
         ...
     </select>
-    <select name="myselect">
+    <select name="myotherselect">
         <option value="de">germany</option>
         <option value="at">austria</option>
         ...
     </select>
 
-**performance recommendations**
+performance recommendations
+-----------------------------------
 For example reading a value from a database and (un)escaping this string on each request isn't optimal - try to store the (un)escaped string into database and save time for (un)escaping on each request.
 As we return HTML it makes most time no sense to do something like:
 
