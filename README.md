@@ -13,7 +13,6 @@ It's blazing fast because your HTML template will be automaticly converted into 
 - easy extendable without touching server- or module code with pure js code
 - define and re-use your own functions with pure js for better maintaining your templates
 
-
 - [Install](#install)
 - [i18n internationalization](#i18n-internationalization)
 - [HTML-Templates](#html-templates)
@@ -24,7 +23,7 @@ It's blazing fast because your HTML template will be automaticly converted into 
 	- [performance recommendations](#performance-recommendations)
 - [Functions](#functions)
 	- [Creation](#creation)
-	- [Rendering](#rendering)
+	- [Rendering](#rendering) 
 - [Example](#example)
 - [Credits](#credits)
 - [License](#license)
