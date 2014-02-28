@@ -190,8 +190,7 @@ You can use some build-in function out-of-box:
 
 -encode(value);
 
-```HTML
-    <div>
+```JavaScript
     {{inline
         if(data.x>0)
         {
@@ -267,7 +266,9 @@ Creation
 ----------
 To create js functions from html templates and i18n locals you have to call
 
-    createTranslationTemplates(HTML_TemplateDirectory,locals_Directory,ViewOutputDirectory,Callback)
+```JavaScript
+    createTranslationTemplates(HTML_TemplateDirectory,locals_Directory,ViewOutputDirectory,Callback);
+```
 
 For each i18n-local file this function will create a translated version of each template and will store generated html files in subfolders under ViewOutputDirectory.
 It also creates a file **compiled.js** for each local-file which will be also stored in subfolder under ViewOutputDirectory. This file will contain pure js-functions.
