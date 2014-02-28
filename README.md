@@ -2,6 +2,17 @@ html2js
 =======
 It's an express.js template module which creates pure js functions from html templates including i18n internationalisation and translations without learning a new mark-up-language.
 html2js gives you full flexibility and power of js inside your templates because you can use plain js to build your own logic.
+It's blazing fast because your HTML template will be automaticly converted into pure js code during startup.
+
+**WHY SHOULD I USE IT?**
+
+- blazing fast because of creating pure, executable js code
+- one template fits for different language/country combinations(i18n support) for simple maintaining your templates
+- easy and short syntax inside of pure HTML
+- template logic is NOT limited to a few fixed functions **full js functionality**
+- easy extendable without touching server- or module code with pure js code
+- define and re-use your own functions with pure js for better maintaining your templates
+
 
 Install
 ====
@@ -36,7 +47,7 @@ HTML-Templates
 ==========
 Creating a template is still easy. You can take your html as it is - just insert placeholders where you need it.
 
-**You only have to take care not to use ' somewhere in your HTML-code because it will broke-down compiled functions! Use " instead of ' or escape with \' to prevent this.**
+**You only have to take care not to use ' somewhere in your HTML-code because it will broke-down compiled functions! Use " instead of ' to prevent this.**
 
 **Also take care that there is a space after {{ and before }} - so {{translate.something}} will be wrong**
 
@@ -98,22 +109,41 @@ To include other template parts (partials) just use something like this:
     <div>{{inc footer.html }}</div>
     .....
 
-You are also able to implement logic with full power of js to execute some code during runtime:
+You are also able to implement logic-functions with full power of js to execute some code during runtime.
+There are three options available to implement your own template logic.
+
+**inline functions**
+Because of inline-functions you are able to execute functions or small code.
+To add something to your output you have to call *ret+=[...your value...];*.
 
     .....
-    <div>{{fn var r='';
-            for(x=0,x_max=data.a.length;x<x_max;x++)
+    <div>{{inline
+        ret+=(data.x+1); //outputs value x+1
+        ret+=data.something.toUpperCase(); //outputs something in lower cases
+        ret+=translate.somelabel+': '+data.somevalue;
+        ret+=myFunction(data.x); //call a function and out returned value
+    }}</div>
+
+**self-defining**
+Sometimes you need a more complex functionality or you like to copy and paste some functions.
+For this cases you can define the code for a function like a regular function without setting a name or parameters.
+Just write your code and use *return* to return and output your data.
+
+    .....
+    <div>{{fn
+            var r='';
+            for(var x=0,x_max=data.a.length;x<x_max;x++)
             {r+=data.a[x];} 
             return r+' '+translate.message;
     }}</div>
     .....
 
-So in the example above it will compile something like:
+The example above will be compile into something like:
 
     function fn123(data,translate)
     {
         var r='';
-        for(x=0,x_max=data.a.length;x<x_max;x++)
+        for(var x=0,x_max=data.a.length;x<x_max;x++)
         {
             r+=data.a[x];
         } 
@@ -121,12 +151,71 @@ So in the example above it will compile something like:
     }
 
 {{fn ... }} will wrap everything into a separate function and you can access translations and data. You only have to return a value.
-**But keep eyes on what you are doing and if its necessary to do it on each request. It hurts your performance.**
+As you can see you got access to your data and your current local translation object.
+**But keep eyes on what you are doing and if its necessary to do it on each request. It maybe hurts your performance.**
+Self-defining functions will become a name automaticly on each generation.
+
+**pre-defined functions**
+You can use some build-in function out-of-box:
+
+- **encode(value);**
+-
+
+    <div>
+    {{inline
+        if(data.x>0)
+        {
+            ret+=translate.results+':<br/>';
+            ret+=encode(data.something);
+        }else
+        {
+            ret+=translate.nothingFound;
+        }
+    }}
+
+
+**adding own pre-definied functions**
+To add your own functions you can also create a regular js-file inside of templates directory and name it **functions.js**.
+You can for example add a code like this:
+
+    function outputSelectOptions(val)
+    {
+        var ret='';
+        for(var x=0,x_max=val.length;x<x_max;x++)
+        {
+            ret+='<option value="'+val[x].key+'">'+val[x].label+'</option>';
+        }
+        return ret;
+    }
+
+...and on any of your templates you can add this functionality like:
+
+    <select name="myselect">
+        {{inline outputSelectOptions(data.variable); }}
+    </select>
+    <select name="myselect">
+        {{inline outputSelectOptions(data.othervar); }}
+    </select>
+
+...and this will output something like:
+
+    <select name="myselect">
+        <option value="1">good</option>
+        <option value="2">better</option>
+        ...
+    </select>
+    <select name="myselect">
+        <option value="de">germany</option>
+        <option value="at">austria</option>
+        ...
+    </select>
+
+**performance recommendations**
 For example reading a value from a database and (un)escaping this string on each request isn't optimal - try to store the (un)escaped string into database and save time for (un)escaping on each request.
 As we return HTML it makes most time no sense to do something like:
 
-    {{fn data.val1.toUpperCase() }}
-    {{fn data.val2.toLowerCase() }}
+    {{inline data.val1.toUpperCase() }}
+    {{inline data.val2.toLowerCase() }}
 
 You can use css on client side and don't need to convert it on server-side on each request in most cases.
 
@@ -163,7 +252,7 @@ To render your template you can use regular express.js function *res.render* whi
 example:
 
     var options={
-        layout:'layoutothertemplate', 
+        layout:'layoutothertemplate', //layout:'' means don't use any layout-template
         data:{
             myvar: 'value to set',
             othervar: 'other value to set'
@@ -173,15 +262,15 @@ example:
 
 If *options.layout* is not set *layout.html* will be used by default. To disable layout template and render given template only (useful for example on Ajax requests) set *options.layout* to empty string.
 
-
 **parameter callback**
 
 Will be a callback-function which will be called after finishing creation of HTML-content.
 This function has two parameters.
 
     callback(err,html)
-    
+
 ...where err is null if everything was ok or contains an Error object if something went wrong. Parameter html will contain HTML-content as string.
+
 
 Example
 =====

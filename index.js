@@ -41,7 +41,9 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
         fs.readdir(localsDir, function(err,localsfiles){
             if(err) return callback(new Error('unable to access locals directory '+localsDir));
             
-            for(x=0,x_max=localsfiles.length;x<x_max;x++)
+            var translation,languageCode,countryCode,countryLng,err,t,localsContent,output;
+            
+            for(var x=0,x_max=localsfiles.length;x<x_max;x++)
             {
                 m = localsfiles[x].match(/.{2}-.{2}\.local/);
                 
@@ -62,7 +64,7 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
                     translation.currentLanguageCode=languageCode;
                     
                     js='';
-                    for(y=0,y_max=templatefiles.length;y<y_max;y++)
+                    for(var y=0,y_max=templatefiles.length;y<y_max;y++)
                     {
                         err=translateTemplate(templateDir+'/'+templatefiles[y],outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],translation);
                         if(err) {
@@ -82,6 +84,8 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
                     
                     js+='var translate='+localsContent+';\n';
                     js+='module.exports.translate=translate;\n';
+                    
+                    
                     
                     output=outputDir+'/'+countryCode+'/'+languageCode+'/compiled.js';
                     fs.writeFileSync(output,js,{encoding:'utf8'});
@@ -153,12 +157,12 @@ function translateTemplate(input,output,translate)
 
     try
     {
-        data=fs.readFileSync(input,'utf8')
+        var data=fs.readFileSync(input,'utf8')
         var d=data;
         d=data.replace(/\{\{ (translate\.[\s\S]+?(\}?)+) \}\}/g , function(match,trans){ 
             //var i=trans.replace(/translate\./,'translation.');
             var v = eval(trans);
-            if(typeof v!='undefined')
+            if(typeof v!=='undefined' && v!==null)
             {
                 return v;
             }else
@@ -211,21 +215,33 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
         }
     });
     
+    t=t.replace(/\{\{inline(\s)([\s\S]+?(\}?)+) \}\}/g , function(match,x,fn){
+        return "';\n"+fn+"\nret+='";
+    });
+    
     t=t.replace(/\{\{fn ([\s\S]+?(\}?)+) \}\}/g , function(match,fn){
         var l=userfn.length;
         userfn[l]='function '+fname+'_'+l+'(data){'+fn+'}';
         return "'+"+fname+'_'+l+"(data)+'";
     });
     
+    
+    
     t=t.replace(/\{\{ (data\.[\s\S]+?(\}?)+) \}\}/g , function(match,data){ 
          return "'+"+data+"+'";
     });
     
+    t=t.replace(/\{\{ (#data\.[\s\S]+?(\}?)+) \}\}/g , function(match,data){ 
+         return "'+encode("+data.slice(1)+")+'";
+    });
+    
+    
     t=t.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+    
 
     var js='';
     
-     for(x2=0,x_max2=userfn.length;x2<x_max2;x2++)
+    for(var x2=0,x_max2=userfn.length;x2<x_max2;x2++)
     {
         js+=userfn[x2]+"\n";
     }
@@ -241,7 +257,8 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
     
     
     js+="\n";
-    js+="return '"+t+"';\n";
+    js+="var ret= '"+t+"';\n";
+    js+="return ret;\n";
     js+='}\n';
     js+='module.exports.'+fname+'='+fname+';\n';
     
@@ -264,21 +281,28 @@ function __express(filename, options, callback) {
     var languageCode=sp[sp.length-2];
     var template=sp[sp.length-1].replace(/.html/,'');
     var js='';
-    for(x=0,x_max=sp.length-1;x<x_max;x++)
+    for(var x=0,x_max=sp.length-1;x<x_max;x++)
     {
         js+=sp[x]+'/';
     }
     js+='compiled.js';
-    var compiled=require(js);
     var content='';
-    if(options.layout!='')
+    
+    try{
+        var compiled=require(js);    
+        if(options.layout!='')
+        {
+            content = compiled[options.layout](options.data ,compiled[template](options.data));
+        }else
+        {
+            content = compiled[template](options.data);
+        }    
+        return callback(null,content);
+    }catch(err)
     {
-        content = compiled[options.layout](options.data ,compiled[template](options.data));
-    }else
-    {
-        content = compiled[template](options.data);
-    }    
-    return callback(null,content);
+        return callback(err,content);
+    }
+    
 }
 
 function html2js()
