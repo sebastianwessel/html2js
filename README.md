@@ -2,7 +2,8 @@ html2js
 =======
 It's an express.js template module which creates pure js functions from html templates including i18n internationalisation and translations without learning a new mark-up-language.
 html2js gives you full flexibility and power of js inside your templates because you can use plain js to build your own logic.
-It's blazing fast because your HTML template will be automaticly converted into pure js code during startup.
+It's blazing fast because your HTML template will be automaticly pre-converted into pure js code during startup.
+There is no need to handle translations or to do a complete rendering dynamicly during runtime on each request!
 
 **WHY SHOULD I USE IT?**
 - blazing fast because of creating pure, executable js code
@@ -39,9 +40,6 @@ or download latest source from git.
 
 i18n internationalization
 ===============
-Maintaining code and templates are hard and even harder as more country-languages combinations you have to maintain.
-So html2js builds different templates for country-language combinations from **one single template**.
-You don't have to maintain multiple templates for multiple country-language combinations! Create one template, define translations and the rest will be done by html2js.
 To generate templates for multiple country-language combinations we create a file for each combination.
 Name convention is *countryCode-languageCode.local* and content of file will be simple JSON.
 
@@ -69,9 +67,7 @@ HTML-Templates
 ==========
 Creating a template is still easy. You can take your html as it is - just insert placeholders where you need it.
 
-**You only have to take care not to use ' somewhere in your HTML-code because it will broke-down compiled functions! Use " instead of ' to prevent this.**
-
-**Also take care that there is a space after {{ and before }} - so {{translate.something}} will be wrong**
+**Take care that there is a space after {{ and before }} - so {{translate.something}} will be wrong**
 
 **Name your templates without spaces or special characters with ending *.html* example: *my template.html* will be invalid and ends up with broken compiled js code**
 
@@ -133,10 +129,12 @@ To output some dynamic data during runtime - for example some things you read fr
 
 ```HTML
 .....
-<div>{{ data.var1 }}</h1>
-<p>{{ data.var2 }}</p>
+<div>{{ data.var1 }}</div>
+<p>{{ #data.var2 }}</p>
 .....
 ```
+
+In example above data.var2 will be HTML-encoded - means chars <>&" will be converted to HTML-special chars.
 
 To include other template parts (partials) just use something like this:
 
@@ -149,6 +147,28 @@ To include other template parts (partials) just use something like this:
 
 You are also able to implement logic-functions with full power of js to execute some code during runtime.
 There are three options available to implement your own template logic.
+
+**generated HTML-code will be reduced to a minimum and all pagebreaks, tabs and spaces between elements are removed!**
+
+Original template source:
+```HTML
+.....
+<!-- this will be removed -->
+<div>
+    <div> <b>something bold</b>
+    </div>
+</div>
+.....
+```
+
+Generated template source (space between <div> and <b> will be removed also):
+```HTML
+.....
+<div><div><b>something bold</b></div></div>
+.....
+```
+
+**If you use javascript inside of an template - no matter if inside a <script> tag or to extend html2js functionality - keep aware to end up with ";" on each line because pagebreaks are removed!**
 
 inline functions
 -----------------
@@ -175,10 +195,10 @@ Just write your code and use *return* to return and output your data.
 ```JavaScript
 .....
 {{fn
-        var r='';
-        for(var x=0,x_max=data.a.length;x<x_max;x++)
-        {r+=data.a[x];} 
-        return r+' '+translate.message;
+    var r='';
+    for(var x=0,x_max=data.a.length;x<x_max;x++)
+    {r+=data.a[x];} 
+    return r+' '+translate.message;
 }}
 .....
 ```
@@ -199,7 +219,7 @@ function fn123(data,translate)
 
 {{fn ... }} will wrap everything into a separate function and you can access translations and data. You only have to return a value.
 As you can see you got access to your data and your current local translation object.
-**But keep eyes on what you are doing, how you implement it and if its necessary to do it on each request. It maybe drops performance.**
+**But keep eyes on what you are doing and if its necessary to do it on each request. It maybe hurts your performance.**
 Self-defining functions will become a name automaticly on each generation.
 
 pre-defined functions
@@ -228,75 +248,65 @@ To add your own functions you can also create a regular js-file inside of templa
 You can for example add a code like this:
 
 ```JavaScript
-    function outputSelectOptions(val)
+function outputSelectOptions(val)
+{
+    var ret='';
+    for(var x=0,x_max=val.length;x<x_max;x++)
     {
-        var ret='';
-        for(var x=0,x_max=val.length;x<x_max;x++)
-        {
-            ret+='<option value="'+val[x].key+'">'+val[x].label+'</option>';
-        }
-        return ret;
+        ret+='<option value="'+val[x].key+'">'+val[x].label+'</option>';
     }
+    return ret;
+}
 ```
 
 ...and on any of your templates you can add this functionality like:
 
 ```HTML
-    <select name="myselect">
-        {{inline ret+=outputSelectOptions(data.variable); }}
-    </select>
-    <select name="myotherselect">
-        {{inline ret+=outputSelectOptions(data.othervar); }}
-    </select>
+<select name="myselect">
+    {{inline ret+=outputSelectOptions(data.variable); }}
+</select>
+<select name="myotherselect">
+    {{inline ret+=outputSelectOptions(data.othervar); }}
+</select>
 ```
 
 ...and this will output something like:
 
 ```HTML
-    <select name="myselect">
-        <option value="1">good</option>
-        <option value="2">better</option>
-        ...
-    </select>
-    <select name="myotherselect">
-        <option value="de">germany</option>
-        <option value="at">austria</option>
-        ...
-    </select>
+<select name="myselect">
+    <option value="1">good</option>
+    <option value="2">better</option>
+    ...
+</select>
+<select name="myotherselect">
+    <option value="de">germany</option>
+    <option value="at">austria</option>
+    ...
+</select>
 ```
 
 performance recommendations
 -----------------------------------
 For example reading a value from a database and (un)escaping this string on each request isn't optimal - try to store the (un)escaped string into database and save time for (un)escaping on each request.
+Try to **not use** encode-functions for variable because of regular expressions it will hit your performance.
+
+```JavaScript
+{{inline ret+=encode(data.val1); }}
+```
+
+```HTML
+{{ #data.val1 }}
+```
+
+
 As we return HTML it makes most time no sense to do something like:
 
 ```JavaScript
-    {{inline ret+=data.val1.toUpperCase(); }}
-    {{inline ret+=data.val2.toLowerCase(); }}
+{{inline ret+=data.val1.toUpperCase(); }}
+{{inline ret+=data.val2.toLowerCase(); }}
 ```
 
 You can use css on client side and don't need to convert it on server-side on each request in most cases.
-
-Avoid use of global vars inside your functions because it can drop performance and unexpected errors maybe occour because you can overwrite internal vars used by server program.
-Also keep an eye on how you write loops - using something like *a.length* inside a loop-condition is a common mistake because you request *a.length* times size of *a*, but it doesn't change whole time.
-
-**wrong:**
-```JavaScript
-for(x=0;x<a.length;x++)
-{
-    ret+=a[x];
-}
-return ret;
-```
-**correct:**
-```JavaScript
-var ret='';
-for(var x=0,x_max=a.length;x<x_max;x++)
-{
-    ret+=a[x];
-}
-return ret;
-```
 
 Functions
 ======
@@ -306,7 +316,7 @@ Creation
 To create js functions from html templates and i18n locals you have to call
 
 ```JavaScript
-    createTranslationTemplates(HTML_TemplateDirectory,locals_Directory,ViewOutputDirectory,Callback);
+createTranslationTemplates(HTML_TemplateDirectory,locals_Directory,ViewOutputDirectory,Callback);
 ```
 
 For each i18n-local file this function will create a translated version of each template and will store generated html files in subfolders under ViewOutputDirectory.

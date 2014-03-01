@@ -5,7 +5,7 @@
  * functions.js will be automaticly included in every compiled.js file.
  */
 
-function escape(txt)
+function encode(txt)
 {
     var escapeExp = /[&<>"]/,
     escapeAmpExp = /&/g,

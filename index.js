@@ -42,6 +42,7 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
             if(err) return callback(new Error('unable to access locals directory '+localsDir));
             
             var translation,languageCode,countryCode,countryLng,err,t,localsContent,output;
+            var m,n,js='',addjs='';
             
             for(var x=0,x_max=localsfiles.length;x<x_max;x++)
             {
@@ -66,24 +67,34 @@ function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
                     js='';
                     for(var y=0,y_max=templatefiles.length;y<y_max;y++)
                     {
-                        err=translateTemplate(templateDir+'/'+templatefiles[y],outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],translation);
-                        if(err) {
-                            console.log(err);
-                            return err;
+                        n=templatefiles[y].substr( templatefiles[y].lastIndexOf('.') );
+                        if(n=='.js')
+                        {
+                            addjs+=fs.readFileSync(templateDir+'/'+templatefiles[y],'utf8');
+                        }else if(n=='.html')
+                        {
+                            err=translateTemplate(templateDir+'/'+templatefiles[y],outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],translation);
+                            if(err) {
+                                console.log(err);
+                                return err;
+                            }
+
+                            t=generateJS(
+                                countryCode,
+                                languageCode,
+                                templatefiles[y],
+                                templatefiles,
+                                fs.readFileSync(outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],'utf8')
+                                        );
+                            js+=t+'\n';
                         }
                         
-                        t=generateJS(
-                            countryCode,
-                            languageCode,
-                            templatefiles[y],
-                            templatefiles,
-                            fs.readFileSync(outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],'utf8')
-                                    );
-                        js+=t+'\n';
                     }
                     
                     js+='var translate='+localsContent+';\n';
                     js+='module.exports.translate=translate;\n';
+                    addjs+='\n'+fs.readFileSync(__dirname+'/fn_include.js','utf8');
+                    js+='\n'+addjs;
                     
                     
                     
@@ -186,6 +197,24 @@ function strStartsWith(str, prefix) {
 }
 
 
+function escape(t)
+{
+    var ret=t;
+    ret=ret.replace(/(.)(')/g,function(match,p1){
+    //ret=ret.replace(/(?:[^\\])(')/,function(match,p1){
+        var r=match;
+        if(r.substr(0,1)==='\\')
+        {
+            r=match.replace(/'/,'\\\\\'');
+        }else
+        {
+            r=match.replace(/'/,'\\\'');
+        }
+        return r;
+    });
+    return ret;
+}
+
 /*
  * This function takes translated html template content for one country-language-combinantion and creates js code.
  * Generated js code will be returned as String.
@@ -204,6 +233,33 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
     var userfn=[];
     var isLayout=strStartsWith(fname,'layout');
     
+    //remove space, tabs, pagebreaks before and after markup {{...}}
+    t=t.replace(/([\s]*)\{\{/g,'{{').replace(/\}\}([\s]*)/g,'}}');
+    
+    //remove all spaces, comments and pagebreaks and escape ' character
+    if(t.match(/\{\{([\s\S]+?(\}?)+) \}\}/g))
+    {
+        //clean-up all bewteen }} and {{
+        t+='{{ }}';
+        t=t.replace(/([\s\S]+?)\{\{/ , function(match,txt){
+            var m=match;
+            m=escape(m);
+            return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+        });
+        t=t.replace(/\}\}([\s\S]+?)\{\{/g , function(match,txt){
+            var m=match;
+            m=escape(m);
+            return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+        });
+        t=t.substr(0,t.length-5);
+    }else
+    {
+        //clean-up from content which not contain markup {{ ... }}
+        t=escape(t);
+        t=t.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+    }
+    
+    //handle include partials
     t=t.replace(/\{\{inc ([\s\S]+?(\}?)+) \}\}/g , function(match,incfile){
         if(allTemplates.indexOf(incfile)>=0)
         {
@@ -215,37 +271,37 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
         }
     });
     
+    //handle inline functions
     t=t.replace(/\{\{inline(\s)([\s\S]+?(\}?)+) \}\}/g , function(match,x,fn){
+        fn=fn.replace(/\n\s+/g,'\n');
         return "';\n"+fn+"\nret+='";
     });
     
+    //handle self-defining functions
     t=t.replace(/\{\{fn ([\s\S]+?(\}?)+) \}\}/g , function(match,fn){
         var l=userfn.length;
         userfn[l]='function '+fname+'_'+l+'(data){'+fn+'}';
         return "'+"+fname+'_'+l+"(data)+'";
     });
     
-    
-    
+    //handle data.[object]
     t=t.replace(/\{\{ (data\.[\s\S]+?(\}?)+) \}\}/g , function(match,data){ 
          return "'+"+data+"+'";
     });
     
+    //handle data.[object] and encode
     t=t.replace(/\{\{ (#data\.[\s\S]+?(\}?)+) \}\}/g , function(match,data){ 
          return "'+encode("+data.slice(1)+")+'";
     });
     
-    
-    t=t.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
-    
-
+    //add self-defining functions
     var js='';
-    
     for(var x2=0,x_max2=userfn.length;x2<x_max2;x2++)
     {
         js+=userfn[x2]+"\n";
     }
     
+    //handle layout template body content
     if(isLayout)
     {
         t=t.replace(/\{\{ body \}\}/g , "'+body+'");
@@ -254,7 +310,6 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
     {
         js+='function '+fname+'(data){';
     }
-    
     
     js+="\n";
     js+="var ret= '"+t+"';\n";
