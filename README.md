@@ -168,7 +168,7 @@ Generated template source (space between <div> and <b> will be removed also):
 .....
 ```
 
-**If you use javascript inside of an template - no matter if inside a <script> tag or to extend html2js functionality - keep aware to end up with ";" on each line because pagebreaks are removed!**
+**If you use javascript inside of an template - no matter if inside a script tag or to extend html2js functionality - keep aware to end up with ";" on each line because pagebreaks are removed!**
 
 inline functions
 -----------------
