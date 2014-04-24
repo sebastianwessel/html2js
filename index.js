@@ -15,6 +15,157 @@ var options={
     outputDir:'./views'
 };
 
+
+function generate(templateDir,localsDir,outputDir,callback)
+{
+    callback = (typeof callback === 'function') ? callback : function () {};
+    generateRecursive(templateDir,localsDir,outputDir);
+    return callback();
+}
+
+function generateRecursive(templateDir,localsDir,outputDir)
+{
+    
+
+    fs.stat(outputDir, function(err, stats) {
+        if(err || !stats.isDirectory()) {
+            return callback(new Error('unable to access output directory '+outputDir));
+        } 
+    });
+    
+    fs.readdir(templateDir, function(err,templatefiles){
+        if(err) return callback(new Error('unable to access template directory '+templateDir));
+        var templates=[];
+        var stat=null;
+        templatefiles.forEach(function(f){
+            stat=fs.statSync(templateDir+'/'+f);
+            if (stat && stat.isDirectory()) {
+                console.log('found directory '+f);
+                //createTranslationTemplates(templateDir+'/'+f,localsDir+'/'+f,outputDir+'/'+f,callback);
+                var locals_sub=localsDir+'/'+f;
+                var output_sub=outputDir+'/'+f;
+                var template_sub=templateDir+'/'+f;
+
+                try{
+                    stats=fs.statSync(locals_sub);
+                }catch(e)
+                {
+                    console.log('skip "'+f+'" no translations for '+template_sub);
+                    return;
+                }
+                if(!stats.isDirectory())
+                {
+                    console.log('skip "'+f+'" no translations for '+template_sub);
+                }else
+                {
+                    try{
+                        stats=fs.statSync(output_sub);
+                    }catch(e)
+                    {
+                        console.log('creating '+output_sub);
+                        fs.mkdirSync(output_sub);
+                    }
+                    if(!stats.isDirectory())
+                    {
+                        console.log('creating '+output_sub);
+                        fs.mkdirSync(output_sub);
+                    }
+                }
+                generateRecursive(template_sub,locals_sub,output_sub);
+            }else
+            {
+                templates.push(f);
+            }
+
+        });
+        
+        if(templates.length>0)
+        {
+            console.log('generating: '+templateDir);
+            generateDir(templateDir,templates,localsDir,outputDir);
+        }else
+        {
+            console.log('skip: '+templateDir+' found '+templates.length+' templates');
+        }
+        
+    });
+}
+
+
+
+function generateDir(templateDir,templatefiles,localsDir,outputDir)
+{
+    fs.readdir(localsDir, function(err,localsfiles){
+        if(err) return callback(new Error('unable to access locals directory '+localsDir));
+
+        var translation,languageCode,countryCode,countryLng,err,t,localsContent,output;
+        var m,n,js='',addjs='';
+
+        for(var x=0,x_max=localsfiles.length;x<x_max;x++)
+        {
+            m = localsfiles[x].match(/.{2}-.{2}\.local/);
+
+            if(m)
+            {
+                countryLng=localsfiles[x].split('.');
+                countryLng=countryLng[0].split('-');
+                countryCode=countryLng[0].toLowerCase();
+                languageCode=countryLng[1].toLowerCase();
+
+                err = createOutputDir(outputDir,countryCode,languageCode);
+                if(err!==null) return callback(new Error('unable to access output directory for '+countryCode+'-'+languageCode));
+
+                localsContent=fs.readFileSync(localsDir+'/'+localsfiles[x]);
+                translation=JSON.parse(localsContent);
+
+                translation.currentCountryCode=countryCode;
+                translation.currentLanguageCode=languageCode;
+
+                js='';
+                for(var y=0,y_max=templatefiles.length;y<y_max;y++)
+                {
+                    n=templatefiles[y].substr( templatefiles[y].lastIndexOf('.') );
+                    if(n=='.js')
+                    {
+                        addjs+=fs.readFileSync(templateDir+'/'+templatefiles[y],'utf8');
+                    }else if(n=='.html')
+                    {
+                        err=translateTemplate(templateDir+'/'+templatefiles[y],outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],translation);
+                        if(err) {
+                            console.log(err);
+                            return err;
+                        }
+
+                        t=generateJS(
+                            countryCode,
+                            languageCode,
+                            templatefiles[y],
+                            templatefiles,
+                            fs.readFileSync(outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],'utf8')
+                                    );
+                        js+=t+'\n';
+                    }
+
+                }
+
+                js+='var translate='+localsContent+';\n';
+                js+='module.exports.translate=translate;\n';
+                addjs+='\n'+fs.readFileSync(__dirname+'/fn_include.js','utf8');
+                js+='\n'+addjs;
+
+
+
+                output=outputDir+'/'+countryCode+'/'+languageCode+'/compiled.js';
+                fs.writeFileSync(output,js,{encoding:'utf8'});
+
+            }
+
+        }
+
+    });
+}
+
+
 /*
  * Reads template files from templateDir and replaces placeholders with translations from local-files in laocalsDir.
  * Translated templates will be stored in subdirectories of outputDir.
@@ -244,19 +395,23 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
         t=t.replace(/([\s\S]+?)\{\{/ , function(match,txt){
             var m=match;
             m=escape(m);
-            return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+            //return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+            return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--(?!\[if)(.|\s)*?-->/g,'');
         });
         t=t.replace(/\}\}([\s\S]+?)\{\{/g , function(match,txt){
             var m=match;
             m=escape(m);
-            return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+            //return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+            return m.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--(?!\[if)(.|\s)*?-->/g,'');
         });
         t=t.substr(0,t.length-5);
     }else
     {
         //clean-up from content which not contain markup {{ ... }}
         t=escape(t);
-        t=t.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+        //t=t.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--[\s\S]*?-->/g,'');
+        t=t.replace(/(\r\n|\n|\r|\t)/gm,"").replace(/\s+/g," ").replace(/\> \</g,"><").replace(/<!--(?!\[if)(.|\s)*?-->/g,'');
+        
     }
     
     //handle include partials
@@ -366,5 +521,6 @@ function html2js()
 }
 
 module.exports.html2js=html2js;
+module.exports.generate=generate;
 module.exports.__express=__express;
 module.exports.createTranslationTemplates=createTranslationTemplates;

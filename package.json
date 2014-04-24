@@ -2,12 +2,9 @@
     "name":"html2js",
     "description":"Create pure js functions from html templates including i18n translation",
     "node":"0.10.25",
-    "version": "0.0.1",
+    "version": "0.1.0",
     "private": true,
     "author":"Sebastian Wessel",
-    "dependencies": {
-            "express": "3.*"
-    },
     "main": "index",
   "repository": {
     "type": "git",
