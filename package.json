@@ -2,13 +2,13 @@
     "name":"html2js",
     "description":"Create pure js functions from html templates including i18n translation",
     "node":"0.10.25",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "private": true,
     "author":"Sebastian Wessel",
     "main": "index",
   "repository": {
     "type": "git",
-    "url": "git://github.com/sebastianwessel/html2js"
+    "url": "git://github.com/sebastianwessel/html2js.git"
   },
   "license": "MIT",
   "readmeFilename": "Readme.md",

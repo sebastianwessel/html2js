@@ -8,6 +8,7 @@
  * @url https://github.com/sebastianwessel/html2js
  */
 var fs = require('fs');
+var logger=require('./logger.js').log;
 
 var options={
     templateDir:'./templates',
@@ -15,300 +16,262 @@ var options={
     outputDir:'./views'
 };
 
-
-function generate(templateDir,localsDir,outputDir,callback)
-{
-    callback = (typeof callback === 'function') ? callback : function () {};
-    generateRecursive(templateDir,localsDir,outputDir);
-    return callback();
-}
-
-function generateRecursive(templateDir,localsDir,outputDir)
-{
-    
-
-    fs.stat(outputDir, function(err, stats) {
-        if(err || !stats.isDirectory()) {
-            return callback(new Error('unable to access output directory '+outputDir));
-        } 
-    });
-    
-    fs.readdir(templateDir, function(err,templatefiles){
-        if(err) return callback(new Error('unable to access template directory '+templateDir));
-        var templates=[];
-        var stat=null;
-        templatefiles.forEach(function(f){
-            stat=fs.statSync(templateDir+'/'+f);
-            if (stat && stat.isDirectory()) {
-                console.log('found directory '+f);
-                //createTranslationTemplates(templateDir+'/'+f,localsDir+'/'+f,outputDir+'/'+f,callback);
-                var locals_sub=localsDir+'/'+f;
-                var output_sub=outputDir+'/'+f;
-                var template_sub=templateDir+'/'+f;
-
-                try{
-                    stats=fs.statSync(locals_sub);
-                }catch(e)
-                {
-                    console.log('skip "'+f+'" no translations for '+template_sub);
-                    return;
-                }
-                if(!stats.isDirectory())
-                {
-                    console.log('skip "'+f+'" no translations for '+template_sub);
-                }else
-                {
-                    try{
-                        stats=fs.statSync(output_sub);
-                    }catch(e)
-                    {
-                        console.log('creating '+output_sub);
-                        fs.mkdirSync(output_sub);
-                    }
-                    if(!stats.isDirectory())
-                    {
-                        console.log('creating '+output_sub);
-                        fs.mkdirSync(output_sub);
-                    }
-                }
-                generateRecursive(template_sub,locals_sub,output_sub);
-            }else
-            {
-                templates.push(f);
-            }
-
-        });
-        
-        if(templates.length>0)
-        {
-            console.log('generating: '+templateDir);
-            generateDir(templateDir,templates,localsDir,outputDir);
-        }else
-        {
-            console.log('skip: '+templateDir+' found '+templates.length+' templates');
-        }
-        
-    });
-}
-
-
-
-function generateDir(templateDir,templatefiles,localsDir,outputDir)
-{
-    fs.readdir(localsDir, function(err,localsfiles){
-        if(err) return callback(new Error('unable to access locals directory '+localsDir));
-
-        var translation,languageCode,countryCode,countryLng,err,t,localsContent,output;
-        var m,n,js='',addjs='';
-
-        for(var x=0,x_max=localsfiles.length;x<x_max;x++)
-        {
-            m = localsfiles[x].match(/.{2}-.{2}\.local/);
-
-            if(m)
-            {
-                countryLng=localsfiles[x].split('.');
-                countryLng=countryLng[0].split('-');
-                countryCode=countryLng[0].toLowerCase();
-                languageCode=countryLng[1].toLowerCase();
-
-                err = createOutputDir(outputDir,countryCode,languageCode);
-                if(err!==null) return callback(new Error('unable to access output directory for '+countryCode+'-'+languageCode));
-
-                localsContent=fs.readFileSync(localsDir+'/'+localsfiles[x]);
-                translation=JSON.parse(localsContent);
-
-                translation.currentCountryCode=countryCode;
-                translation.currentLanguageCode=languageCode;
-
-                js='';
-                for(var y=0,y_max=templatefiles.length;y<y_max;y++)
-                {
-                    n=templatefiles[y].substr( templatefiles[y].lastIndexOf('.') );
-                    if(n=='.js')
-                    {
-                        addjs+=fs.readFileSync(templateDir+'/'+templatefiles[y],'utf8');
-                    }else if(n=='.html')
-                    {
-                        err=translateTemplate(templateDir+'/'+templatefiles[y],outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],translation);
-                        if(err) {
-                            console.log(err);
-                            return err;
-                        }
-
-                        t=generateJS(
-                            countryCode,
-                            languageCode,
-                            templatefiles[y],
-                            templatefiles,
-                            fs.readFileSync(outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],'utf8')
-                                    );
-                        js+=t+'\n';
-                    }
-
-                }
-
-                js+='var translate='+localsContent+';\n';
-                js+='module.exports.translate=translate;\n';
-                addjs+='\n'+fs.readFileSync(__dirname+'/fn_include.js','utf8');
-                js+='\n'+addjs;
-
-
-
-                output=outputDir+'/'+countryCode+'/'+languageCode+'/compiled.js';
-                fs.writeFileSync(output,js,{encoding:'utf8'});
-
-            }
-
-        }
-
-    });
-}
-
+var allTemplates=[];
 
 /*
- * Reads template files from templateDir and replaces placeholders with translations from local-files in laocalsDir.
- * Translated templates will be stored in subdirectories of outputDir.
- * createTranslationTemplates calls callback when finished.
+ * Generates multiple templates which are stored in subfolders.
+ * Folder structure will be:
+ * inputDir/template1/html (where html templates are stored)
+ * inputDir/template1/locals (where translations are stored in subfolders)
  * 
- * @param {String} templateDir
- * @param {String} localsDir
- * @param {String} outputDir
- * @param {Function} callback
+ * inputDir/template2/html (where html templates are stored)
+ * inputDir/template2/locals (where translations are stored in subfolders)
+ * 
+ * @param {String} inputDir where templtes are stored
+ * @param {String} outputDir where generated files are stored
+ * @param {Function} callback function which is called after generation
  */
-function createTranslationTemplates(templateDir,localsDir,outputDir,callback)
-{
+function generateMulti(inputDir,outputDir,callback){
     callback = (typeof callback === 'function') ? callback : function () {};
-
-    fs.stat(outputDir, function(err, stats) {
-        if(err || !stats.isDirectory()) {
-            return callback(new Error('unable to access output directory '+outputDir));
-        } 
-    });
-    
-    fs.readdir(templateDir, function(err,templatefiles){
-        if(err) return callback(new Error('unable to access template directory '+templateDir));
-                
-        fs.readdir(localsDir, function(err,localsfiles){
-            if(err) return callback(new Error('unable to access locals directory '+localsDir));
-            
-            var translation,languageCode,countryCode,countryLng,err,t,localsContent,output;
-            var m,n,js='',addjs='';
-            
-            for(var x=0,x_max=localsfiles.length;x<x_max;x++)
-            {
-                m = localsfiles[x].match(/.{2}-.{2}\.local/);
-                
-                if(m)
-                {
-                    countryLng=localsfiles[x].split('.');
-                    countryLng=countryLng[0].split('-');
-                    countryCode=countryLng[0].toLowerCase();
-                    languageCode=countryLng[1].toLowerCase();
-                    
-                    err = createOutputDir(outputDir,countryCode,languageCode);
-                    if(err!==null) return callback(new Error('unable to access output directory for '+countryCode+'-'+languageCode));
-                    
-                    localsContent=fs.readFileSync(localsDir+'/'+localsfiles[x]);
-                    translation=JSON.parse(localsContent);
-                    
-                    translation.currentCountryCode=countryCode;
-                    translation.currentLanguageCode=languageCode;
-                    
-                    js='';
-                    for(var y=0,y_max=templatefiles.length;y<y_max;y++)
-                    {
-                        n=templatefiles[y].substr( templatefiles[y].lastIndexOf('.') );
-                        if(n=='.js')
-                        {
-                            addjs+=fs.readFileSync(templateDir+'/'+templatefiles[y],'utf8');
-                        }else if(n=='.html')
-                        {
-                            err=translateTemplate(templateDir+'/'+templatefiles[y],outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],translation);
-                            if(err) {
-                                console.log(err);
-                                return err;
-                            }
-
-                            t=generateJS(
-                                countryCode,
-                                languageCode,
-                                templatefiles[y],
-                                templatefiles,
-                                fs.readFileSync(outputDir+'/'+countryCode+'/'+languageCode+'/'+templatefiles[y],'utf8')
-                                        );
-                            js+=t+'\n';
-                        }
-                        
-                    }
-                    
-                    js+='var translate='+localsContent+';\n';
-                    js+='module.exports.translate=translate;\n';
-                    addjs+='\n'+fs.readFileSync(__dirname+'/fn_include.js','utf8');
-                    js+='\n'+addjs;
-                    
-                    
-                    
-                    output=outputDir+'/'+countryCode+'/'+languageCode+'/compiled.js';
-                    fs.writeFileSync(output,js,{encoding:'utf8'});
-                    
-                }
-                
-            }
-            
-        });
-        
-    });
-    
-
-    return callback(null);
-}
-
-
-/*
- * Checks if subdirectory in outputDir for given countryCode and languageCode exists.
- * If subdirectory does not exist this function will create necessary subdirectories.
- * On success null will be returned otherwise an error will be returned.
- * 
- * @param {String} outputDir
- * @param {String} countryCode
- * @param {String} languageCode
- * @return {null|Error}
- */
-function createOutputDir(outputDir,countryCode,languageCode)
-{
-    var ret=true;
-    var stats=null;
+    var stat=null;
+    var err2=null;
     try
     {
-        try{
-            stats=fs.statSync(outputDir+'/'+countryCode);
-            if(!stats.isDirectory())
-            {
-                fs.mkdirSync(outputDir+'/'+countryCode);
-            }
-        }catch(err){
-            fs.mkdirSync(outputDir+'/'+countryCode);
-        }
-
-        try{
-            stats=fs.statSync(outputDir+'/'+countryCode+'/'+languageCode);
-            if(!stats.isDirectory())
-            {
-                fs.mkdirSync(outputDir+'/'+countryCode+'/'+languageCode);
-            }
-        }catch(err){
-            fs.mkdirSync(outputDir+'/'+countryCode+'/'+languageCode);
-        }    
-        return null;
-    }catch(e)
+        stat=fs.statSync(outputDir);
+        if(!stat.isDirectory()) {
+            logger.logError(outputDir+' is no directory!');
+            return callback(new Error(outputDir+' is no directory!'));
+        } 
+    }catch(err)
     {
-        return(new Error('Unable to create directories for '+countryCode+'-'+languageCode));
+        logger.logError('unable to access output directory '+outputDir);
+        return callback(err);
     }
+    
+    try
+    {
+        var templateDir=fs.readdirSync(inputDir);
+        templateDir.forEach(function(f){
+            stat=fs.statSync(inputDir+'/'+f);
+            if (stat && stat.isDirectory()) {
+                logger.logInfo('template directory '+f);
+                
+                try{
+                    stat=fs.statSync(outputDir+'/'+f);
+                    if(!stat || !stat.isDirectory())
+                    {
+                        logger.logError(outputDir+'/'+f+' is not a directory');
+                        return new Error(outputDir+'/'+f+' is not a directory');
+                    }
+
+                }catch(err3)
+                {
+                    try
+                    {
+                        fs.mkdirSync(outputDir+'/'+f);
+                        logger.logDebug('created outputDir for '+f);
+                    }catch(err4){
+                        logger.logError('unable to create output directory '+f);
+                        return err4;
+                    }
+
+                }
+                
+                err2=generate(inputDir+'/'+f,outputDir+'/'+f,f);
+                if(err2)
+                {
+                    logger.logError('error in template f: '+err2.toString());
+                }
+            };
+        });
+        return callback();
+    }catch(err)
+    {
+        logger.logError('unable to access template directory '+inputDir);
+        return callback(err);
+    }    
+}
+
+function generate(inputDir,outputDir,f) {
+    f = (typeof f === 'string') ? f : 'template';
+    var stat=null;
+    try
+    {
+        stat=fs.statSync(inputDir+'/html');
+        if (!stat.isDirectory()) {
+            return new Error(f+'/html is not a folder');
+        }
+        logger.logInfo('found html directory for '+f);
+        try
+        {
+            stat=fs.statSync(inputDir+'/locals');
+            if (!stat.isDirectory()) {
+                return new Error(f+'/locals is not a folder');
+            }
+            logger.logInfo('found locals directory for '+f);
+            
+            
+            var err5=generateTemplate(f,inputDir,outputDir);
+            if(err5) return err5;
+            
+        }catch(err2)
+        {
+            logger.logError('no locals folder found for '+f);
+            return err2;
+        }
+          
+    }catch(err){
+        logger.logError('no html folder found for '+f);
+        return err;
+    }
+ 
 }
 
 /*
- * This function reads content of file input, replaces placeholders with translations from JSON-object translate and writes result ro output file
+ * 
+ * @param {String} templateName (template folder)
+ * @param {String} inputDir
+ * @param {String} outputDir
+ * @returns {Error} returns error object or null
+ */
+function generateTemplate(f,inputDir,outputDir) {
+    logger.logDebug('start generating template '+f);
+    var htmls=[];
+    var err=null;
+    var stat=null;
+    
+    htmls=fs.readdirSync(inputDir+'/locals');
+    htmls.forEach(function(localsDir){
+        stat=fs.statSync(inputDir+'/locals/'+localsDir);
+        if (stat && stat.isDirectory()) {
+            logger.logInfo('found translation '+localsDir+' for '+f);
+            
+            try{
+                stat=fs.statSync(outputDir+'/'+localsDir);
+                if (!stat || !stat.isDirectory()) {
+                    logger.logError('output directory '+localsDir+' for '+f+' is not a directory');
+                    return new Error('output directory '+localsDir+' for '+f+' is not a directory');
+                }
+            }catch(err){
+                try{
+                    fs.mkdirSync(outputDir+'/'+localsDir);
+                    logger.logDebug('created output directory '+localsDir+' for '+f);
+                }catch(err2){
+                    
+                    logger.logError('unable to create output directory '+localsDir+' for '+f);
+                    return err2;
+                }
+            }
+            
+            err=generateTranslation(f,inputDir,outputDir,localsDir);
+            if(err) return err;
+        }
+    });
+    return null;
+}
+
+function generateTranslation(f,inputDir,outputDir,localsDir){
+    var translations=[];
+    var err=null;
+    var stat=null;
+    var localsContent=null;
+    var item=null;
+    var templates=[];
+    
+    var translation={};
+    
+    translations=fs.readdirSync(inputDir+'/locals/'+localsDir);
+    
+    try{
+        localsContent=fs.readFileSync(inputDir+'/locals/'+localsDir+'/_default.json');
+        try{
+            translation=JSON.parse(localsContent);
+            logger.logDebug('setting defaults from _default.json in '+localsDir+' for '+f);
+        }catch(e2){
+            logger.logError('invalid json file _default.json for '+f+' in '+localsDir);
+            return e2;
+        }
+    }catch(e){
+        logger.logDebug('no _default.json in '+localsDir+' for '+f);
+    }
+    
+    translations.forEach(function(file){
+        if(file.match(/^([a-zA-Z0-9_]+)\.json/) && file!=='_default.json')
+        {
+            stat=fs.statSync(inputDir+'/locals/'+localsDir+'/'+file);
+            if (stat && !stat.isDirectory()) {
+                logger.logDebug('adding translation file '+file+' to '+localsDir+' for '+f);
+                
+                try {
+                    localsContent=fs.readFileSync(inputDir+'/locals/'+localsDir+'/'+file);
+                }catch(e)
+                {
+                    logger.logError('unable to read file '+file+' for '+f+' in '+localsDir);
+                    return e;
+                }
+                
+                try{
+                    item=file.split('.');
+                    translation[item[0]]=JSON.parse(localsContent);
+                }catch(e)
+                {
+                    logger.logError('invalid json file '+file+' for '+f+' in '+localsDir);
+                    return e;
+                }
+                
+
+            }
+        }else
+        {
+            if(file!=='_default.json') logger.logDebug('skipping '+file+' in '+localsDir+' for '+f);
+        }        
+    });
+    
+    templates=fs.readdirSync(inputDir+'/html/');
+    templates.forEach(function(file){
+        err=translateTemplate(inputDir+'/html/'+file,outputDir+'/'+localsDir+'/'+file,translation);
+        if(err) {
+            logger.logError(err.stack);
+            return err;
+        }
+    });
+    
+    var js='',addjs='',output='',n='';
+
+        
+    templates.forEach(function(file){      
+        n=file.substr( file.lastIndexOf('.') );
+        if(n=='.js')
+        {
+            addjs+=fs.readFileSync(inputDir+'/'+localsDir+'/'+file,'utf8');
+        }else if(n=='.html')
+        {
+
+            t=generateJS(
+                file,
+                templates,
+                fs.readFileSync(outputDir+'/'+localsDir+'/'+file,'utf8')
+                        );
+            js+=t+'\n';
+        }
+    });
+
+    //js+='var translate='+localsContent+';\n';
+    js+='var translate='+JSON.stringify(translation)+';\n';
+    js+='module.exports.translate=translate;\n';
+    addjs+='\n'+fs.readFileSync(__dirname+'/fn_include.js','utf8');
+    js+='\n'+addjs;
+
+
+    output=outputDir+'/'+localsDir+'/compiled.js';
+    fs.writeFileSync(output,js,{encoding:'utf8'});
+        
+    return null;
+}
+
+
+/*
+ * This function reads content of file input, replaces placeholders with translations from JSON-object translate and stores result to output file
  * @param {String} input
  * @param {String} output
  * @param {Object} translate
@@ -316,28 +279,34 @@ function createOutputDir(outputDir,countryCode,languageCode)
  */
 function translateTemplate(input,output,translate)
 {
-
+    var v=null;
     try
     {
         var data=fs.readFileSync(input,'utf8')
         var d=data;
         d=data.replace(/\{\{ (translate\.[\s\S]+?(\}?)+) \}\}/g , function(match,trans){ 
-            //var i=trans.replace(/translate\./,'translation.');
-            var v = eval(trans);
-            if(typeof v!=='undefined' && v!==null)
+            try
             {
-                return v;
-            }else
+                v = eval(trans);
+                if(typeof v!=='undefined' && v!==null)
+                {
+                    return v;
+                }else
+                {
+                    logger.logWarning(trans+' '+(typeof v)+' not set in translation files but used in template '+input);
+                    return match;
+                }
+            }catch(err)
             {
-                console.log('warning: '+trans+' '+(typeof v)+' for '+translate.currentCountryCode+'-'+translate.currentLanguageCode+' but used in template '+input);
+                logger.logWarning(trans+' '+(typeof v)+' not set in translation files but used in template '+input);
                 return match;
             }
-
         });
         fs.writeFileSync(output,d,{encoding:'utf8'});
         return null;
     }catch(e)
     {
+        logger.logError('error translating '+output);
         return e;
     }
 }
@@ -377,7 +346,7 @@ function escape(t)
  * @param {String} templateContent
  * @returns {String}
  */
-function generateJS(countryCode,languageCode,templateName,allTemplates,templateContent)
+function generateJS(templateName,allTemplates,templateContent)
 {
     var t=templateContent;
     var fname=templateName.replace(/.html/,'');
@@ -387,7 +356,7 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
     //remove space, tabs, pagebreaks before and after markup {{...}}
     t=t.replace(/([\s]*)\{\{/g,'{{').replace(/\}\}([\s]*)/g,'}}');
     
-    //remove all spaces, comments and pagebreaks and escape ' character
+    //remove all spaces, HTML comments and pagebreaks and escape ' character
     if(t.match(/\{\{([\s\S]+?(\}?)+) \}\}/g))
     {
         //clean-up all bewteen }} and {{
@@ -421,7 +390,7 @@ function generateJS(countryCode,languageCode,templateName,allTemplates,templateC
             return "'+"+incfile.replace(/.html/,'')+"(data)+'";
         }else
         {
-            console.log('warning: '+templateName+' includes none existing template '+incfile);
+            logger.logWarning(templateName+' includes none existing template '+incfile);
             return match;
         }
     });
@@ -487,8 +456,10 @@ function __express(filename, options, callback) {
     if(typeof options.layout ==='undefined') options.layout='layout';
     
     var sp=filename.split('/');
+    /*
     var countryCode=sp[sp.length-3];
     var languageCode=sp[sp.length-2];
+    */
     var template=sp[sp.length-1].replace(/.html/,'');
     var js='';
     for(var x=0,x_max=sp.length-1;x<x_max;x++)
@@ -500,7 +471,7 @@ function __express(filename, options, callback) {
     
     try{
         var compiled=require(js);    
-        if(options.layout!='')
+        if(options.layout!=='')
         {
             content = compiled[options.layout](options.data ,compiled[template](options.data));
         }else
@@ -520,7 +491,13 @@ function html2js()
     
 }
 
+function setLogger(l) {
+    logger=l;
+}
+
+
 module.exports.html2js=html2js;
+module.exports.setLogger=setLogger;
+module.exports.generateMulti=generateMulti;
 module.exports.generate=generate;
 module.exports.__express=__express;
-module.exports.createTranslationTemplates=createTranslationTemplates;

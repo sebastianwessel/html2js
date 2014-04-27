@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <title>data 1 from _default.json</title>
+        <script>
+            /* some multiline comment
+             * which should be removed
+             */
+            
+            function testjs(param) {
+                //single line comment
+                alert(param);
+            }
+            
+            testjs('this is a test');
+        </script>
+    </head>
+    <body>
+        some text data 1 from _default.json with some data 2 from _default.json and 
+        test 1 from content.json and additional {{ translate.not.set }}
+        
+        {{inc include.html }}
+        {{inc non_existing.html }}
+    </body>
+</html>
