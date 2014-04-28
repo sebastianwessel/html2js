@@ -9,6 +9,7 @@
  */
 var fs = require('fs');
 var logger=require('./logger.js').log;
+var objectMerge=require('object-merge');
 
 var options={
     templateDir:'./templates',
@@ -139,8 +140,21 @@ function generateTemplate(f,inputDir,outputDir) {
     var htmls=[];
     var err=null;
     var stat=null;
+    var defaultTranslations={};
+    var currentTranslation=null;
+    var currentCountryCode='',currentLanguageCode='';
+    var c=[];
     
     htmls=fs.readdirSync(inputDir+'/locals');
+
+    htmls.sort(function(a,b){
+        var ret=0;
+        if(a.length>b.length) ret=1;
+        if(a.length<b.length) ret=-1;
+        return ret; 
+    });
+
+    
     htmls.forEach(function(localsDir){
         stat=fs.statSync(inputDir+'/locals/'+localsDir);
         if (stat && stat.isDirectory()) {
@@ -163,14 +177,40 @@ function generateTemplate(f,inputDir,outputDir) {
                 }
             }
             
-            err=generateTranslation(f,inputDir,outputDir,localsDir);
-            if(err) return err;
+            c=localsDir.split('-');
+            if(c.length>1){
+                currentCountryCode=c[0];
+                currentLanguageCode=c[1];
+            }else
+            {
+                currentCountryCode='';
+                currentLanguageCode=localsDir;
+            }
+            
+            if(defaultTranslations[currentLanguageCode]){
+                currentTranslation=defaultTranslations[currentLanguageCode];
+                currentTranslation.currentCountryCode=currentCountryCode;
+                currentTranslation.currentLanguageCode=currentLanguageCode;
+            }else
+            {
+                currentTranslation={'currentLanguageCode':currentLanguageCode,'currentCountryCode':currentCountryCode};
+            }
+            
+            err=generateTranslation(f,inputDir,outputDir,localsDir,currentTranslation);
+            if(err && err instanceof Error){
+                logger.logError(err);
+                return err;
+            }
+            if(err){
+                defaultTranslations[localsDir]=err;
+            }
+            
         }
     });
     return null;
 }
 
-function generateTranslation(f,inputDir,outputDir,localsDir){
+function generateTranslation(f,inputDir,outputDir,localsDir,defaultTranslation){
     var translations=[];
     var err=null;
     var stat=null;
@@ -227,24 +267,30 @@ function generateTranslation(f,inputDir,outputDir,localsDir){
         }        
     });
     
+    var tmp=translation;
+    if(defaultTranslation!==null){
+        tmp=objectMerge(defaultTranslation,translation);
+        logger.logDebug('merging language default translation with '+localsDir+' ');
+    }
+    
     templates=fs.readdirSync(inputDir+'/html/');
     templates.forEach(function(file){
-        err=translateTemplate(inputDir+'/html/'+file,outputDir+'/'+localsDir+'/'+file,translation);
+        err=translateTemplate(inputDir+'/html/'+file,outputDir+'/'+localsDir+'/'+file,tmp);
         if(err) {
-            logger.logError(err.stack);
+            logger.logError(err);
             return err;
         }
     });
     
-    var js='',addjs='',output='',n='';
+    var js='',addjs='',output='',n='',t='';
 
         
     templates.forEach(function(file){      
         n=file.substr( file.lastIndexOf('.') );
-        if(n=='.js')
+        if(n==='.js')
         {
-            addjs+=fs.readFileSync(inputDir+'/'+localsDir+'/'+file,'utf8');
-        }else if(n=='.html')
+            addjs+=fs.readFileSync(inputDir+'/html/'+file,'utf8');
+        }else if(n==='.html')
         {
 
             t=generateJS(
@@ -264,9 +310,8 @@ function generateTranslation(f,inputDir,outputDir,localsDir){
 
 
     output=outputDir+'/'+localsDir+'/compiled.js';
-    fs.writeFileSync(output,js,{encoding:'utf8'});
-        
-    return null;
+    fs.writeFileSync(output,js,{encoding:'utf8'});   
+    return tmp;
 }
 
 
@@ -352,6 +397,13 @@ function generateJS(templateName,allTemplates,templateContent)
     var fname=templateName.replace(/.html/,'');
     var userfn=[];
     var isLayout=strStartsWith(fname,'layout');
+    
+    //remove comments from javascript blocks
+    t=t.replace(/<script[^<]*<\/script>/g ,function(match,txt){
+        var m=match;
+        m=m.replace(/(\/\*([\s\S]*?)\*\/)|(\/\/(.*)$)/gm, '');
+        return m;
+    });
     
     //remove space, tabs, pagebreaks before and after markup {{...}}
     t=t.replace(/([\s]*)\{\{/g,'{{').replace(/\}\}([\s]*)/g,'}}');

@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git://github.com/sebastianwessel/html2js.git"
   },
+  "dependencies":{
+      "object-merge":">=2.5.1"
+  },
   "license": "MIT",
   "readmeFilename": "Readme.md",
   "bugs": {
