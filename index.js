@@ -36,6 +36,7 @@ function generateMulti(inputDir,outputDir,callback){
     callback = (typeof callback === 'function') ? callback : function () {};
     var stat=null;
     var err2=null;
+    var validTemplates=[];
     try
     {
         stat=fs.statSync(outputDir);
@@ -82,9 +83,31 @@ function generateMulti(inputDir,outputDir,callback){
                 if(err2)
                 {
                     logger.logError('error in template f: '+err2.toString());
+                }else
+                {
+                    validTemplates.push(f);
                 }
             };
         });
+        
+        
+        var js='',l=validTemplates.length;
+        js+='var name=\'\';\n';
+        js+='var validTemplates={';
+
+        validTemplates.forEach(function(n){
+            js+='\n\t\''+n+'\':require(\'./'+n+'/template_info.js\')';
+            l--;
+            if(l>0) js+=',';
+        });
+        js+='\n};\n';
+        js+='module.exports.validTemplates=validTemplates;\n';
+        js+='module.exports.name=name;\n';
+        js+='module.exports.single=false;\n';
+
+        fs.writeFileSync(outputDir+'/template_info.js',js,{encoding:'utf8'});
+        
+        
         return callback();
     }catch(err)
     {
@@ -93,6 +116,14 @@ function generateMulti(inputDir,outputDir,callback){
     }    
 }
 
+/*
+ * Generates single template
+ *  
+ * @param {String} inputDir
+ * @param {String} outputDir
+ * @param {String} null or template name
+ * @returns {Error|err|unresolved|err2}
+ */
 function generate(inputDir,outputDir,f) {
     f = (typeof f === 'string') ? f : 'template';
     var stat=null;
@@ -129,10 +160,11 @@ function generate(inputDir,outputDir,f) {
 }
 
 /*
+ * Generates outputfolders and each (country-)language combination for given template
  * 
- * @param {String} templateName (template folder)
- * @param {String} inputDir
- * @param {String} outputDir
+ * @param {String} templateName
+ * @param {String} inputDir (template folder)
+ * @param {String} outputDir 
  * @returns {Error} returns error object or null
  */
 function generateTemplate(f,inputDir,outputDir) {
@@ -144,6 +176,7 @@ function generateTemplate(f,inputDir,outputDir) {
     var currentTranslation=null;
     var currentCountryCode='',currentLanguageCode='';
     var c=[];
+    var validLanguages=[];
     
     htmls=fs.readdirSync(inputDir+'/locals');
 
@@ -204,12 +237,41 @@ function generateTemplate(f,inputDir,outputDir) {
             if(err){
                 defaultTranslations[localsDir]=err;
             }
+            validLanguages.push(localsDir);
             
         }
     });
+    
+    var js='',l=validLanguages.length;
+    js+='var name=\''+f+'\';\n';
+    js+='var validLanguages={';
+    
+    validLanguages.forEach(function(n){
+        js+='\n\t\''+n+'\':require(\'./'+n+'/compiled.js\')';
+        l--;
+        if(l>0) js+=',';
+    });
+    js+='\n};\n';
+    js+='module.exports.validLanguages=validLanguages;\n';
+    js+='module.exports.name=name;\n';
+    js+='module.exports.single=true;\n';
+    
+    fs.writeFileSync(outputDir+'/template_info.js',js,{encoding:'utf8'});
+    
     return null;
 }
 
+/*
+ * generates single translation for given (country-)language combination
+ * generates compiled.js file for given (country-)language combination
+ * 
+ * @param {String} template name
+ * @param {String} inputDir
+ * @param {String} outputDir
+ * @param {String} localsDir
+ * @param {Object} default Translation
+ * @returns {Error| translation Object}
+ */
 function generateTranslation(f,inputDir,outputDir,localsDir,defaultTranslation){
     var translations=[];
     var err=null;
@@ -361,7 +423,11 @@ function strStartsWith(str, prefix) {
     return str.indexOf(prefix) === 0;
 }
 
-
+/*
+ * 
+ * @param {String} String to escape character '
+ * @returns {String} escaped String
+ */
 function escape(t)
 {
     var ret=t;
@@ -381,7 +447,7 @@ function escape(t)
 }
 
 /*
- * This function takes translated html template content for one country-language-combinantion and creates js code.
+ * This function takes translated html template content for one (country-)language-combinantion and creates js code.
  * Generated js code will be returned as String.
  * 
  * @param {String} countryCode
@@ -504,25 +570,48 @@ function generateJS(templateName,allTemplates,templateContent)
 function __express(filename, options, callback) {
     callback = (typeof callback === 'function') ? callback : function () {};
     
-    options = (typeof options === 'object') ? options : {layout:'layout',data:{}};
-    if(typeof options.layout ==='undefined') options.layout='layout';
     
     var sp=filename.split('/');
-    /*
-    var countryCode=sp[sp.length-3];
-    var languageCode=sp[sp.length-2];
-    */
+    var ctrlngCode=sp[sp.length-2];
+    var ctrlngsplit=ctrlngCode.split('-');
+    var lng=ctrlngsplit[ctrlngsplit.length-1];
     var template=sp[sp.length-1].replace(/.html/,'');
+    
+    if(options!==null)
+    {
+        options = (typeof options === 'object') ? options : {layout:'layout',data:{}};
+        if(typeof options.layout ==='undefined') options.layout='layout';
+    }else
+    {
+        options={layout:''};
+    }
+    
     var js='';
-    for(var x=0,x_max=sp.length-1;x<x_max;x++)
+    for(var x=0,x_max=sp.length-2;x<x_max;x++)
     {
         js+=sp[x]+'/';
     }
-    js+='compiled.js';
-    var content='';
+    js+='template_info.js';
+    var content=null,compiled=null;
     
     try{
-        var compiled=require(js);    
+        var tInfo=require(js);
+        compiled=tInfo.validLanguages[ctrlngCode];
+        if(!compiled){
+            logger.logDebug('unable to find solution for '+ctrlngCode+' try to use only '+lng);
+            if(ctrlngsplit.length>1){
+                compiled=tInfo.validLanguages[lng];
+                if(!compiled){
+                    logger.logError('unable to find template_info.js for '+ctrlngCode+' or '+lng);
+                    logger.logError(filename);
+                    return callback(e);
+                }
+            }else
+            {
+                logger.logError('unable to find template_info.js for '+filename);
+                return callback(e);
+            }
+        }
         if(options.layout!=='')
         {
             content = compiled[options.layout](options.data ,compiled[template](options.data));
@@ -531,11 +620,11 @@ function __express(filename, options, callback) {
             content = compiled[template](options.data);
         }    
         return callback(null,content);
-    }catch(err)
-    {
-        return callback(err,content);
+        
+    }catch(e){
+        logger.logError('unable to find template_info.js for '+filename);
+        return callback(e);
     }
-    
 }
 
 function html2js()

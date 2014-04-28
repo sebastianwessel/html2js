@@ -14,6 +14,13 @@ html2js.generateMulti(__dirname + '/templates',__dirname + '/views',function(err
     }else
     {
         logger.logInfo('generation complete!');
+        html2js.__express(__dirname +'/views/sample/us-de/test',{layout:''},function(err,content){
+            if(err){
+                logger.logError('test-result error: '+err.toString());
+                return;
+            }
+            logger.logDebug(content);
+        });
     }
     
 });
