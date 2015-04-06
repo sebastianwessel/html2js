@@ -1,0 +1,27 @@
+{
+  "name" : "Log2Bunyan",
+  "description" : "Logging over Stomp-protocol",
+  "node" : "0.10.25",
+  "version" : "0.0.1",
+  "private" : true,
+  "author" : {
+    "name" : "Sebastian Wessel",
+    "email" : "sebastianwessel@icloud.com",
+    "url" : "https://github.com/sebastianwessel"
+  },
+  "main" : "./",
+  "repository" : {
+    "type" : "git",
+    "url" : "git://github.com/sebastianwessel/Log2Bunyan.git"
+  },
+  "dependencies" : {
+    "object-merge" : ">=2.5.1"
+  },
+  "license" : "MIT",
+  "readmeFilename" : "Readme.md",
+  "bugs" : {
+    "url" : "https://github.com/sebastianwessel/Log2Bunyan/issues"
+  },
+  "homepage" : "https://github.com/sebastianwessel/Log2Bunyan",
+  "keywords" : [ "logging", "bunyan", "stomp" ]
+}
